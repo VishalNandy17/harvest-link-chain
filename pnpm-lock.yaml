@@ -167,9 +167,6 @@ importers:
       vaul:
         specifier: ^0.9.9
         version: 0.9.9(@types/react-dom@18.3.7(@types/react@18.3.24))(@types/react@18.3.24)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      vite-plugin-pwa:
-        specifier: ^1.0.3
-        version: 1.0.3(vite@5.4.19(@types/node@22.18.0)(terser@5.43.1))(workbox-build@7.3.0)(workbox-window@7.3.0)
       workbox-webpack-plugin:
         specifier: ^7.0.0
         version: 7.3.0(webpack@5.101.3)
@@ -187,7 +184,7 @@ importers:
         specifier: ^0.5.16
         version: 0.5.16(tailwindcss@3.4.17)
       '@types/node':
-        specifier: ^22.16.5
+        specifier: ^22.18.0
         version: 22.18.0
       '@types/react':
         specifier: ^18.3.23
@@ -231,6 +228,9 @@ importers:
       vite:
         specifier: ^5.4.19
         version: 5.4.19(@types/node@22.18.0)(terser@5.43.1)
+      vite-plugin-pwa:
+        specifier: ^1.0.3
+        version: 1.0.3(vite@5.4.19(@types/node@22.18.0)(terser@5.43.1))(workbox-build@7.3.0)(workbox-window@7.3.0)
 
 packages:
 
