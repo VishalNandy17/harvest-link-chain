@@ -1,0 +1,41 @@
+{
+  "name": "hlc-api",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "ts-node-dev src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ethers": "^5.8.0",
+    "socket.io": "^4.7.5",
+    "mongoose": "^8.0.0",
+    "zod": "^3.22.4",
+    "jsonwebtoken": "^9.0.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "morgan": "^1.10.0",
+    "qrcode": "^1.5.1",
+    "dotenv": "^16.4.5",
+    "pino": "^8.17.0"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.7.5",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.30",
+    "@types/socket.io": "^3.0.2",
+    "@types/socket.io-client": "^1.4.36",
+    "@types/mongoose": "^5.11.97",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/cors": "^2.8.17",
+    "@types/helmet": "^4.0.0",
+    "@types/morgan": "^1.9.4",
+    "@types/qrcode": "^1.4.2",
+    "@types/pino": "^8.10.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5"
+  }
+}

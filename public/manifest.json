@@ -1,0 +1,28 @@
+{
+  "name": "Harvest Link Chain",
+  "short_name": "HarvestChain",
+  "description": "Blockchain-powered harvest management system",
+  "theme_color": "#16a34a",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/pwa-192x192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa-512x512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "finance"],
+  "lang": "en",
+  "orientation": "portrait",
+  "prefer_related_applications": false
+}

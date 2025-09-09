@@ -36,7 +36,53 @@ npm i
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+
+---
+
+## Minimal Production Stack
+
+- **Contracts**: Deploy to Polygon or any EVM-compatible chain
+- **API**: Host on a $4 VPS (Hetzner, DigitalOcean, etc.) using PM2 or Docker Compose (MongoDB + API)
+- **Web**: Deploy to Vercel or Netlify
+
+## Lightweight Hosting
+
+- Use Railway, Fly.io, or Render for API
+- Use MongoDB Atlas free tier for database
+
+## Security Note
+
+- **Do not keep PRIVATE_KEY in the repo.** Use a cloud secret manager (e.g., AWS Secrets Manager, GCP Secret Manager, Vercel/Netlify env vars)
+
+## Example: Local Development with Docker Compose
+
+Create a `docker-compose.yml` in the project root:
+
+```yaml
+version: '3.8'
+services:
+	mongo:
+		image: mongo:6
+		ports:
+			- "27017:27017"
+		volumes:
+			- mongo-data:/data/db
+	api:
+		build: ./services/api
+		environment:
+			- MONGO_URI=mongodb://mongo:27017/hlc
+			- RPC_URL=<your_rpc_url>
+			- CONTRACT_ADDRESS=<your_contract_address>
+			- PRIVATE_KEY=<your_private_key>
+			- JWT_SECRET=<your_jwt_secret>
+			- API_BASE_URL=http://localhost:4000
+		ports:
+			- "4000:4000"
+		depends_on:
+			- mongo
+volumes:
+	mongo-data:
+```
 
 - Navigate to the desired file(s).
 - Click the "Edit" button (pencil icon) at the top right of the file view.
