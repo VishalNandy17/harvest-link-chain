@@ -1,8 +1,3 @@
-import { ethers } from 'ethers';
-import { config } from '../config';
-import abi from './SupplyChainRegistry.json';
-
-const provider = new ethers.providers.JsonRpcProvider(config.RPC_URL);
-const contract = new ethers.Contract(config.CONTRACT_ADDRESS, abi, provider);
-
-export { provider, contract };
+version https://git-lfs.github.com/spec/v1
+oid sha256:3927175e886ce80b71a6851afabe8ad251aa49e09760aeb8234e51c7523c66b5
+size 305

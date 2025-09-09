@@ -1,17 +1,3 @@
-import mongoose, { Schema, Document } from 'mongoose';
-
-export interface IEventLog extends Document {
-  event: string;
-  batchId: string;
-  payload: any;
-  at: Date;
-}
-
-const EventLogSchema = new Schema({
-  event: { type: String, required: true },
-  batchId: { type: String, required: true },
-  payload: { type: Schema.Types.Mixed, required: true },
-  at: { type: Date, default: Date.now }
-});
-
-export default mongoose.model<IEventLog>('EventLog', EventLogSchema);
+version https://git-lfs.github.com/spec/v1
+oid sha256:753e89c849c48f56c3b4e0cf1c52ea0678ce7de97afdd7c2b62c2fdb920b0b21
+size 482

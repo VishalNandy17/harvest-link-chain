@@ -1,20 +1,3 @@
-import http from 'http';
-import { Server } from 'socket.io';
-import app from './app';
-import path from 'path';
-
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: '*' }
-});
-
-app.use('/public/qr', express.static(path.join(__dirname, '../public/qr')));
-
-io.on('connection', (socket) => {
-  console.log('Socket connected:', socket.id);
-});
-
-const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => {
-  console.log(`API server listening on port ${PORT}`);
-});
+version https://git-lfs.github.com/spec/v1
+oid sha256:c05db05c6c48cb5acd5b4982e279e59ee747b2ce9b6f230ff323ad020c693e22
+size 522

@@ -1,13 +1,3 @@
-import { ethers } from "hardhat";
-
-async function main() {
-  // Example deploy script
-  const [deployer] = await ethers.getSigners();
-  console.log("Deploying contracts with the account:", deployer.address);
-  // Add contract deployment logic here
-}
-
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+version https://git-lfs.github.com/spec/v1
+oid sha256:49eb8fa1258c83437288e43dd9a1eb5fa980cbc588d591ba5f0c7ba9030aed0d
+size 342

@@ -1,11 +1,3 @@
-import { ethers } from 'ethers';
-import { config } from '../config';
-
-const provider = new ethers.providers.JsonRpcProvider(config.RPC_URL);
-
-export function getLocalSigner() {
-  if (!config.PRIVATE_KEY) throw new Error('PRIVATE_KEY not set in env');
-  return new ethers.Wallet(config.PRIVATE_KEY, provider);
-}
-
-// TODO: Support meta-transactions or user-signed txs via relayers for production
+version https://git-lfs.github.com/spec/v1
+oid sha256:fb3ce6cb322ac31fc5ee2f3752b6c6c58917692763b4d047edc3031b3dd30b89
+size 405

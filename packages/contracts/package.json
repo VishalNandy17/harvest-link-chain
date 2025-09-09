@@ -1,31 +1,3 @@
-{
-  "name": "@hlc/contracts",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "build": "hardhat compile",
-    "test": "hardhat test",
-    "node": "hardhat node",
-    "deploy": "hardhat run scripts/deploy.ts --network hardhat",
-    "seed": "hardhat run scripts/seed.ts --network hardhat"
-  },
-  "devDependencies": {
-    "@nomiclabs/hardhat-ethers": "^2.2.2",
-    "@nomiclabs/hardhat-waffle": "^2.0.6",
-    "@openzeppelin/contracts": "^5.0.1",
-    "@typechain/ethers-v5": "^10.2.0",
-    "@typechain/hardhat": "^9.1.0",
-    "@types/chai": "^5.2.2",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "^24.3.0",
-    "chai": "^4.3.10",
-    "dotenv": "^17.2.1",
-    "ethers": "^6.15.0",
-    "hardhat": "^2.22.0",
-    "hardhat-deploy": "^0.11.33",
-    "mocha": "^10.2.0",
-    "ts-node": "^10.9.2",
-    "typechain": "^8.1.0",
-    "typescript": "^5.4.5"
-  }
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:1b8cef61bb20bfcc8da26192929238cd7d33c4e9ebd3a57d9ece462698456bdb
+size 863

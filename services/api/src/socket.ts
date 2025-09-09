@@ -1,22 +1,3 @@
-import { Server, Socket } from 'socket.io';
-import jwt from 'jsonwebtoken';
-import { config } from './config';
-
-export function setupSocket(io: Server) {
-  io.use((socket: Socket, next) => {
-    const token = socket.handshake.auth.token;
-    try {
-      const payload = jwt.verify(token, config.JWT_SECRET);
-      (socket as any).user = payload;
-      next();
-    } catch {
-      next(new Error('Authentication error'));
-    }
-  });
-
-  io.on('connection', (socket: Socket) => {
-    socket.on('joinBatch', (batchId: string) => {
-      socket.join(`batch:${batchId}`);
-    });
-  });
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:d87d121ef52d0ebf995d08176fdcf5aa1ee5abb05bd7ebf50e230c6df3c4c3e8
+size 605

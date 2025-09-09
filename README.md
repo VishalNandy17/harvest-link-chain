@@ -1,102 +1,126 @@
-# Welcome to your Lovable project
+# 🌾 Harvest Chain
 
-## Project info
+A blockchain-based supply chain management system for agricultural products, enabling transparent tracking from farm to consumer.
 
-**URL**: https://lovable.dev/projects/a4883aad-770d-4622-9c42-c65be932fe24
+![Harvest Chain Banner](https://via.placeholder.com/1200x400/4CAF50/FFFFFF?text=Harvest+Chain)
 
-## How can I edit this code?
+## 🚀 Features
 
-There are several ways of editing your application.
+- **End-to-End Traceability**: Track agricultural products from farm to consumer
+- **Blockchain Integration**: Immutable record-keeping using smart contracts
+- **User Authentication**: Secure login and registration system
+- **Batch Management**: Create and manage product batches with detailed information
+- **Real-time Tracking**: Monitor product movement through the supply chain
+- **Responsive Design**: Works on desktop and mobile devices
 
-**Use Lovable**
+## 🛠 Tech Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/a4883aad-770d-4622-9c42-c65be932fe24) and start prompting.
+### Frontend
+- **Framework**: React 18 with TypeScript
+- **UI Components**: shadcn/ui with Radix UI primitives
+- **State Management**: React Query
+- **Form Handling**: React Hook Form with Zod validation
+- **Styling**: Tailwind CSS
+- **Build Tool**: Vite
 
-Changes made via Lovable will be committed automatically to this repo.
+### Backend
+- **Blockchain**: Ethereum-compatible smart contracts (Solidity)
+- **API**: Node.js with Express
+- **Database**: MongoDB
+- **Authentication**: JWT
 
-**Use your preferred IDE**
+## 📦 Prerequisites
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Node.js 18+
+- npm or pnpm
+- MongoDB instance
+- Ethereum-compatible wallet (e.g., MetaMask)
+- Git
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 🚀 Getting Started
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+### 1. Clone the Repository
+```bash
+git clone https://github.com/VishalNandy17/harvest-link-chain.git
+cd harvest-link-chain
 ```
 
-
----
-
-## Minimal Production Stack
-
-- **Contracts**: Deploy to Polygon or any EVM-compatible chain
-- **API**: Host on a $4 VPS (Hetzner, DigitalOcean, etc.) using PM2 or Docker Compose (MongoDB + API)
-- **Web**: Deploy to Vercel or Netlify
-
-## Lightweight Hosting
-
-- Use Railway, Fly.io, or Render for API
-- Use MongoDB Atlas free tier for database
-
-## Security Note
-
-- **Do not keep PRIVATE_KEY in the repo.** Use a cloud secret manager (e.g., AWS Secrets Manager, GCP Secret Manager, Vercel/Netlify env vars)
-
-## Example: Local Development with Docker Compose
-
-Create a `docker-compose.yml` in the project root:
-
-```yaml
-version: '3.8'
-services:
-	mongo:
-		image: mongo:6
-		ports:
-			- "27017:27017"
-		volumes:
-			- mongo-data:/data/db
-	api:
-		build: ./services/api
-		environment:
-			- MONGO_URI=mongodb://mongo:27017/hlc
-			- RPC_URL=<your_rpc_url>
-			- CONTRACT_ADDRESS=<your_contract_address>
-			- PRIVATE_KEY=<your_private_key>
-			- JWT_SECRET=<your_jwt_secret>
-			- API_BASE_URL=http://localhost:4000
-		ports:
-			- "4000:4000"
-		depends_on:
-			- mongo
-volumes:
-	mongo-data:
+### 2. Install Dependencies
+```bash
+pnpm install
 ```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 3. Set Up Environment Variables
+Create a `.env` file in the root directory and add the following variables:
+```env
+VITE_API_BASE_URL=http://localhost:4000
+VITE_RPC_URL=your_ethereum_rpc_url
+VITE_CONTRACT_ADDRESS=your_smart_contract_address
+```
 
-**Use GitHub Codespaces**
+### 4. Start Development Servers
+In separate terminal windows, run:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+# Start the frontend
+pnpm dev:web
 
-## What technologies are used for this project?
+# Start the API server
+pnpm dev:api
+
+# Start local blockchain node (optional)
+pnpm dev:contracts
+```
+
+## 🌐 Project Structure
+
+```
+src/
+├── components/     # Reusable UI components
+├── contexts/      # React contexts
+├── hooks/         # Custom React hooks
+├── lib/           # Utility functions and configurations
+├── pages/         # Application pages
+│   ├── Dashboard.tsx
+│   ├── Login.tsx
+│   ├── SignUp.tsx
+│   └── ...
+└── services/      # API and blockchain services
+```
+
+## 🔧 Development
+
+### Available Scripts
+
+- `dev`: Start development server
+- `build`: Build for production
+- `lint`: Run ESLint
+- `preview`: Preview production build
+- `dev:all`: Start all services (web, api, contracts)
+
+### Code Style
+
+- Follow [Airbnb JavaScript Style Guide](https://github.com/airbnb/javascript)
+- Use TypeScript types wherever possible
+- Write meaningful commit messages
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [shadcn/ui](https://ui.shadcn.com/) for the amazing component library
+- [Vite](https://vitejs.dev/) for the excellent development experience
+- [Ethereum](https://ethereum.org/) for the blockchain infrastructure
 
 This project is built with:
 
