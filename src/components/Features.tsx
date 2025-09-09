@@ -9,10 +9,8 @@ import {
   MapPin,
   Clock,
   Award,
-  BarChart3,
-  ArrowRight
+  BarChart3
 } from "lucide-react";
-import { Link } from "react-router-dom";
 
 export const Features = () => {
   const features = [
@@ -116,30 +114,6 @@ export const Features = () => {
               <div className="text-3xl font-bold mb-2">24/7</div>
               <div className="text-white/80">Real-time Monitoring</div>
             </div>
-          </div>
-        </div>
-
-        {/* CTA Section */}
-        <div className="text-center mt-16">
-          <h3 className="text-2xl font-bold text-foreground mb-4">
-            Ready to Experience Transparent Farming?
-          </h3>
-          <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join thousands of farmers and consumers who trust our blockchain platform 
-            for complete supply chain transparency and fair trade practices.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/signup">
-              <Button variant="hero" size="lg" className="group text-lg px-8 py-4 h-auto shadow-xl">
-                Get Started Today
-                <ArrowRight className="ml-3 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button variant="outline" size="lg" className="text-lg px-8 py-4 h-auto border-2">
-                Sign In to Dashboard
-              </Button>
-            </Link>
           </div>
         </div>
       </div>

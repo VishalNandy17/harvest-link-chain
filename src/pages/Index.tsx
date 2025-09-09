@@ -4,7 +4,6 @@ import { Features } from "@/components/Features";
 import { Dashboard } from "@/components/Dashboard";
 import { QRSection } from "@/components/QRSection";
 import { Stakeholders } from "@/components/Stakeholders";
-import { Footer } from "@/components/Footer";
 
 const Index = () => {
   return (
@@ -15,7 +14,6 @@ const Index = () => {
       <Dashboard />
       <QRSection />
       <Stakeholders />
-      <Footer />
     </div>
   );
 };
