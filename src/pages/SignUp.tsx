@@ -3,12 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, Lock, Mail, User, ArrowLeft, CheckCircle, XCircle } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, User, ArrowLeft, CheckCircle, XCircle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { UserRole } from "@/lib/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const signUpSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -16,6 +18,9 @@ const signUpSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
+  role: z.nativeEnum(UserRole, {
+    errorMap: () => ({ message: "Please select a role" }),
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -68,7 +73,8 @@ const SignUp = () => {
     try {
       const { error } = await signUp(data.email, data.password, {
         firstName: data.firstName,
-        lastName: data.lastName
+        lastName: data.lastName,
+        role: data.role
       });
       
       if (error) {
@@ -82,7 +88,7 @@ const SignUp = () => {
       
       toast({
         title: "Account created successfully!",
-        description: "Welcome to Harvest Link Chain. Please check your email to verify your account.",
+        description: `Welcome to KrishiSetu. Please check your email to verify your account.`,
       });
       
       // Redirect to login page
@@ -110,10 +116,10 @@ const SignUp = () => {
             Back to Home
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Join Harvest Link Chain
+            Join KrishiSetu
           </h1>
           <p className="text-gray-600">
-            Create your account to start your blockchain farming journey
+            Create your account to start your blockchain-powered agricultural journey
           </p>
         </div>
 
@@ -285,6 +291,35 @@ const SignUp = () => {
                 </div>
                 {errors.confirmPassword && (
                   <p className="text-sm text-red-600">{errors.confirmPassword.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="role" className="text-sm font-medium text-gray-700">
+                  Select Your Role
+                </label>
+                <div className="relative">
+                  <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Select onValueChange={(value) => {
+                    const roleValue = value as UserRole;
+                    const event = {
+                      target: { name: "role", value: roleValue }
+                    } as React.ChangeEvent<HTMLInputElement>;
+                    register("role").onChange(event);
+                  }}>
+                    <SelectTrigger className="pl-10">
+                      <SelectValue placeholder="Select your role in the supply chain" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={UserRole.FARMER}>Farmer</SelectItem>
+                      <SelectItem value={UserRole.DISTRIBUTOR}>Distributor</SelectItem>
+                      <SelectItem value={UserRole.RETAILER}>Retailer</SelectItem>
+                      <SelectItem value={UserRole.CONSUMER}>Consumer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {errors.role && (
+                  <p className="text-sm text-red-600">{errors.role.message}</p>
                 )}
               </div>
 

@@ -2,15 +2,34 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
+// Import user roles from types
+import { UserRole } from '@/lib/types';
+
+// Extended user profile with role
+export interface UserProfile {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  role: UserRole
+  phone?: string
+  address?: string
+  created_at?: string
+  updated_at?: string
+}
+
 interface AuthContextType {
   user: User | null
   session: Session | null
+  profile: UserProfile | null
   loading: boolean
-  signUp: (email: string, password: string, userData?: { firstName: string; lastName: string }) => Promise<{ error: AuthError | null }>
+  userRole: UserRole | null
+  signUp: (email: string, password: string, userData: { firstName: string; lastName: string; role: UserRole }) => Promise<{ error: AuthError | null }>
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>
+  updateProfile: (data: Partial<UserProfile>) => Promise<{ error: Error | null }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -30,7 +49,25 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Fetch user profile from Supabase
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (error) {
+      console.error('Error fetching profile:', error)
+      return null
+    }
+
+    return data as UserProfile
+  }
 
   useEffect(() => {
     // Get initial session
@@ -38,6 +75,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { data: { session } } = await supabase.auth.getSession()
       setSession(session)
       setUser(session?.user ?? null)
+      
+      if (session?.user) {
+        const userProfile = await fetchProfile(session.user.id)
+        setProfile(userProfile)
+        setUserRole(userProfile?.role || null)
+      }
+      
       setLoading(false)
     }
 
@@ -48,6 +92,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       async (event, session) => {
         setSession(session)
         setUser(session?.user ?? null)
+        
+        if (session?.user) {
+          const userProfile = await fetchProfile(session.user.id)
+          setProfile(userProfile)
+          setUserRole(userProfile?.role || null)
+        } else {
+          setProfile(null)
+          setUserRole(null)
+        }
+        
         setLoading(false)
       }
     )
@@ -55,34 +109,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => subscription.unsubscribe()
   }, [])
 
-  const signUp = async (email: string, password: string, userData?: { firstName: string; lastName: string }) => {
+  const signUp = async (email: string, password: string, userData: { firstName: string; lastName: string; role: UserRole }) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: userData
+        data: {
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          role: userData.role
+        }
       }
     })
 
-    if (!error && userData) {
-      // Insert user profile data into profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            id: user?.id,
-            first_name: userData.firstName,
-            last_name: userData.lastName,
-            email: email
-          }
-        ])
-      
-      if (profileError) {
-        console.error('Error creating profile:', profileError)
-      }
-    }
+    // Note: The profile will be created automatically via the database trigger
+    // that we set up in the Supabase SQL
 
     return { error }
+  }
+  
+  const updateProfile = async (data: Partial<UserProfile>) => {
+    try {
+      if (!user) throw new Error('User not authenticated')
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update(data)
+        .eq('id', user.id)
+      
+      if (error) throw error
+      
+      // Refresh the profile after update
+      if (user) {
+        const updatedProfile = await fetchProfile(user.id)
+        setProfile(updatedProfile)
+        setUserRole(updatedProfile?.role || null)
+      }
+      
+      return { error: null }
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      return { error: error as Error }
+    }
   }
 
   const signIn = async (email: string, password: string) => {
@@ -114,12 +182,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     session,
+    profile,
     loading,
+    userRole,
     signUp,
     signIn,
     signOut,
     resetPassword,
-    updatePassword
+    updatePassword,
+    updateProfile
   }
 
   return (
