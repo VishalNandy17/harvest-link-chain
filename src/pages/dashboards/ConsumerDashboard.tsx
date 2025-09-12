@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { ResponsiveContainer, ResponsiveGrid, ResponsiveCard, ResponsiveLayout } from '@/components/ui/responsive';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { UserRole } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,7 +19,17 @@ import { QrCode, Search, ShieldCheck, Star, ThumbsUp, Leaf, Clock, Truck, Histor
 import { supabase } from '@/lib/supabase';
 
 const ConsumerDashboard = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, userRole, loading } = useAuth();
+  const navigate = useNavigate();
+  
+  // Ensure this dashboard is only accessible to consumers
+  useEffect(() => {
+    // Only redirect if we're not loading and the user role doesn't match
+    if (!loading && userRole !== UserRole.consumer && userRole !== UserRole.admin) {
+      // Redirect to appropriate dashboard based on role
+      navigate('/', { replace: true });
+    }
+  }, [userRole, loading, navigate]);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   const [isProductDetailOpen, setIsProductDetailOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -108,20 +121,25 @@ const ConsumerDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 p-4 md:p-6">
+      <ResponsiveContainer maxWidth="7xl" paddingX="0" paddingXMd="0">
+        <ResponsiveLayout 
+          mobileDirection="col" 
+          desktopDirection="row" 
+          justify="between" 
+          align="center" 
+          className="mb-8">
           <div>
             <h1 className="text-3xl font-bold text-purple-800">Consumer Dashboard</h1>
             <p className="text-gray-600">Welcome back, {profile?.first_name} {profile?.last_name}</p>
           </div>
-          <Button className="mt-4 md:mt-0 bg-purple-600 hover:bg-purple-700" onClick={scanQRCode}>
+          <Button className="mt-4 md:mt-0 w-full md:w-auto bg-purple-600 hover:bg-purple-700" onClick={scanQRCode}>
             <QrCode className="mr-2 h-4 w-4" /> Scan QR Code
           </Button>
-        </div>
+        </ResponsiveLayout>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
+        <ResponsiveGrid cols={1} colsMd={2} colsLg={4} gap="6" className="mb-8">
+          <ResponsiveCard hoverable>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Products Scanned</CardTitle>
               <QrCode className="h-4 w-4 text-purple-600" />
@@ -130,8 +148,8 @@ const ConsumerDashboard = () => {
               <div className="text-2xl font-bold">12</div>
               <p className="text-xs text-muted-foreground">In the last 30 days</p>
             </CardContent>
-          </Card>
-          <Card>
+          </ResponsiveCard>
+          <ResponsiveCard hoverable>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Verified Products</CardTitle>
               <ShieldCheck className="h-4 w-4 text-purple-600" />
@@ -140,8 +158,8 @@ const ConsumerDashboard = () => {
               <div className="text-2xl font-bold">100%</div>
               <p className="text-xs text-muted-foreground">All products blockchain verified</p>
             </CardContent>
-          </Card>
-          <Card>
+          </ResponsiveCard>
+          <ResponsiveCard hoverable>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Average Farmer Share</CardTitle>
               <ThumbsUp className="h-4 w-4 text-purple-600" />
@@ -150,8 +168,8 @@ const ConsumerDashboard = () => {
               <div className="text-2xl font-bold">78%</div>
               <p className="text-xs text-muted-foreground">Supporting fair trade</p>
             </CardContent>
-          </Card>
-          <Card>
+          </ResponsiveCard>
+          <ResponsiveCard hoverable>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Feedback Given</CardTitle>
               <Star className="h-4 w-4 text-purple-600" />
@@ -160,11 +178,11 @@ const ConsumerDashboard = () => {
               <div className="text-2xl font-bold">8</div>
               <p className="text-xs text-muted-foreground">Your product reviews</p>
             </CardContent>
-          </Card>
-        </div>
+          </ResponsiveCard>
+        </ResponsiveGrid>
 
         <Tabs defaultValue="scans" className="mb-8">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-3 gap-1 mb-4">
             <TabsTrigger value="scans">Recent Scans</TabsTrigger>
             <TabsTrigger value="saved">Saved Products</TabsTrigger>
             <TabsTrigger value="feedback">My Feedback</TabsTrigger>
@@ -179,45 +197,46 @@ const ConsumerDashboard = () => {
               <CardContent>
                 <div className="space-y-6">
                   {recentScans.map((scan) => (
-                    <div key={scan.id} className="border rounded-lg p-4 hover:bg-muted/50">
-                      <div className="flex flex-col md:flex-row justify-between mb-4">
+                    <ResponsiveCard key={scan.id} className="p-4 hover:bg-muted/50" hoverable>
+                      <ResponsiveLayout mobileDirection="col" desktopDirection="row" justify="between" className="mb-4">
                         <div>
-                          <div className="flex items-center">
-                            <h3 className="font-medium text-lg">{scan.product}</h3>
+                          <div className="flex items-center flex-wrap">
+                            <h3 className="font-medium text-lg mr-2">{scan.product}</h3>
                             {scan.verified && (
-                              <Badge className="ml-2 bg-green-500">Verified</Badge>
+                              <Badge className="mt-1 md:mt-0 bg-green-500">Verified</Badge>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">{scan.brand} • Scanned on {scan.scannedDate}</p>
                         </div>
-                        <div className="mt-2 md:mt-0 flex space-x-2">
+                        <div className="mt-2 md:mt-0 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                           <Button 
                             variant="outline" 
                             size="sm"
                             onClick={() => viewProductDetails(scan)}
+                            className="w-full sm:w-auto"
                           >
                             <ShieldCheck className="h-3 w-3 mr-1" /> View Journey
                           </Button>
                           <Button 
                             variant="outline" 
                             size="sm"
-                            className="bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100"
+                            className="bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100 w-full sm:w-auto"
                             onClick={() => setIsFeedbackOpen(true)}
                           >
                             <Star className="h-3 w-3 mr-1" /> Rate
                           </Button>
                         </div>
-                      </div>
+                       </ResponsiveLayout>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <ResponsiveGrid cols={1} colsMd={3} gap={4}>
                         <div className="flex items-center space-x-2">
                           <div className="bg-blue-100 p-1.5 rounded-full">
                             <Leaf className="h-4 w-4 text-blue-600" />
                           </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Origin</p>
-                            <p className="text-sm font-medium">{scan.origin}</p>
-                          </div>
+                           <div>
+                             <p className="text-xs text-muted-foreground">Origin</p>
+                             <p className="text-sm font-medium">{scan.origin}</p>
+                           </div>
                         </div>
                         
                         <div className="flex items-center space-x-2">
@@ -240,7 +259,7 @@ const ConsumerDashboard = () => {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </ResponsiveCard>
                   ))}
                   
                   <div className="flex justify-center">
@@ -289,7 +308,7 @@ const ConsumerDashboard = () => {
               </CardContent>
             </Card>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ResponsiveGrid cols={1} colsMd={2} gap={6}>
               <Card>
                 <CardHeader>
                   <CardTitle>Expiry Reminders</CardTitle>
@@ -383,7 +402,7 @@ const ConsumerDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  <div className="border rounded-lg p-4">
+                  <ResponsiveCard className="p-4" hoverable>
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h3 className="font-medium">Organic Wheat Flour</h3>
@@ -401,7 +420,7 @@ const ConsumerDashboard = () => {
                     <p className="text-sm">"Excellent quality flour! I could really taste the difference in my chapatis. Knowing that the farmer received a fair share makes it even better."</p>
                   </div>
                   
-                  <div className="border rounded-lg p-4">
+                  <ResponsiveCard className="p-4" hoverable>
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h3 className="font-medium">Premium Basmati Rice</h3>
@@ -425,7 +444,7 @@ const ConsumerDashboard = () => {
                     <p className="text-sm">"Good quality rice with nice aroma. Grains remain separate after cooking. Would have given 5 stars but a few broken grains were present."</p>
                   </div>
                   
-                  <div className="border rounded-lg p-4">
+                  <ResponsiveCard className="p-4" hoverable>
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h3 className="font-medium">Fresh Tomatoes</h3>

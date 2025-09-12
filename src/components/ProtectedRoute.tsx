@@ -13,8 +13,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-farm-primary"></div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-farm-primary mb-4"></div>
+        <p className="text-gray-600 font-medium">Loading your dashboard...</p>
+        <p className="text-sm text-gray-500 mt-2">This may take a moment while we verify your credentials.</p>
       </div>
     )
   }
@@ -26,19 +28,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
   // If specific roles are required and user doesn't have the right role
   if (allowedRoles && allowedRoles.length > 0 && userRole && !allowedRoles.includes(userRole)) {
     // Redirect to the appropriate dashboard based on user role
-    if (userRole === 'farmer') {
-      return <Navigate to="/dashboard/farmer" replace />
-    } else if (userRole === 'distributor') {
-      return <Navigate to="/dashboard/distributor" replace />
-    } else if (userRole === 'retailer') {
-      return <Navigate to="/dashboard/retailer" replace />
-    } else if (userRole === 'consumer') {
-      return <Navigate to="/dashboard/consumer" replace />
-    } else if (userRole === 'admin') {
-      return <Navigate to="/dashboard/admin" replace />
+    if (userRole === UserRole.farmer) {
+      return <Navigate to="/dashboards/farmer" replace />
+    } else if (userRole === UserRole.distributor) {
+      return <Navigate to="/dashboards/distributor" replace />
+    } else if (userRole === UserRole.retailer) {
+      return <Navigate to="/dashboards/retailer" replace />
+    } else if (userRole === UserRole.consumer) {
+      return <Navigate to="/dashboards/consumer" replace />
+    } else if (userRole === UserRole.admin) {
+      return <Navigate to="/dashboards/admin" replace />
     } else {
       // Fallback to general dashboard if role is unknown
-      return <Navigate to="/dashboard" replace />
+      return <Navigate to="/" replace />
     }
   }
 

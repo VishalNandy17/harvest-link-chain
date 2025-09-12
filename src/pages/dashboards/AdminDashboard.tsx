@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -34,7 +35,17 @@ import {
 } from 'lucide-react';
 
 const AdminDashboard = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, userRole, loading } = useAuth();
+  const navigate = useNavigate();
+  
+  // Ensure this dashboard is only accessible to admins
+  useEffect(() => {
+    // Only redirect if we're not loading and the user role doesn't match
+    if (!loading && userRole !== UserRole.admin) {
+      // Redirect to appropriate dashboard based on role
+      navigate('/', { replace: true });
+    }
+  }, [userRole, loading, navigate]);
   const [dateRange, setDateRange] = useState('30d');
   const [cropFilter, setCropFilter] = useState('all');
   const [regionFilter, setRegionFilter] = useState('all');

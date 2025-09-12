@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { ResponsiveContainer, ResponsiveGrid, ResponsiveCard, ResponsiveLayout } from '@/components/ui/responsive';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { UserRole } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,7 +17,17 @@ import { Package, TrendingUp, QrCode, BarChart3, DollarSign, ShieldCheck, Search
 import { supabase } from '@/lib/supabase';
 
 const RetailerDashboard = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, userRole, loading } = useAuth();
+  const navigate = useNavigate();
+  
+  // Ensure this dashboard is only accessible to retailers
+  useEffect(() => {
+    // Only redirect if we're not loading and the user role doesn't match
+    if (!loading && userRole !== UserRole.retailer && userRole !== UserRole.admin) {
+      // Redirect to appropriate dashboard based on role
+      navigate('/', { replace: true });
+    }
+  }, [userRole, loading, navigate]);
   const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<any>(null);
@@ -78,20 +91,26 @@ const RetailerDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 p-4 md:p-6">
+      <ResponsiveContainer maxWidth="7xl" paddingX="0" paddingXMd="0">
+        <ResponsiveLayout 
+          mobileDirection="col" 
+          desktopDirection="row" 
+          justify="between" 
+          align="center" 
+          className="mb-8"
+        >
           <div>
-            <h1 className="text-3xl font-bold text-green-800">Retailer Dashboard</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-green-800">Retailer Dashboard</h1>
             <p className="text-gray-600">Welcome back, {profile?.first_name} {profile?.last_name}</p>
           </div>
-          <Button className="mt-4 md:mt-0 bg-green-600 hover:bg-green-700">
+          <Button className="mt-4 md:mt-0 w-full md:w-auto bg-green-600 hover:bg-green-700">
             <ShoppingCart className="mr-2 h-4 w-4" /> New Order
           </Button>
-        </div>
+        </ResponsiveLayout>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
+        <ResponsiveGrid cols={1} colsMd={2} colsLg={4} gap={6} className="mb-8">
+          <ResponsiveCard fullWidthOnMobile>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Inventory</CardTitle>
               <Package className="h-4 w-4 text-green-600" />
@@ -100,8 +119,8 @@ const RetailerDashboard = () => {
               <div className="text-2xl font-bold">400 kg</div>
               <p className="text-xs text-muted-foreground">Across 5 product categories</p>
             </CardContent>
-          </Card>
-          <Card>
+          </ResponsiveCard>
+          <ResponsiveCard fullWidthOnMobile>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
               <Truck className="h-4 w-4 text-green-600" />
@@ -110,8 +129,8 @@ const RetailerDashboard = () => {
               <div className="text-2xl font-bold">3</div>
               <p className="text-xs text-muted-foreground">Expected within 2 days</p>
             </CardContent>
-          </Card>
-          <Card>
+          </ResponsiveCard>
+          <ResponsiveCard fullWidthOnMobile>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Sales Forecast</CardTitle>
               <TrendingUp className="h-4 w-4 text-green-600" />
@@ -120,8 +139,8 @@ const RetailerDashboard = () => {
               <div className="text-2xl font-bold">+12%</div>
               <p className="text-xs text-muted-foreground">Compared to last month</p>
             </CardContent>
-          </Card>
-          <Card>
+          </ResponsiveCard>
+          <ResponsiveCard fullWidthOnMobile>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
               <DollarSign className="h-4 w-4 text-green-600" />
@@ -130,11 +149,11 @@ const RetailerDashboard = () => {
               <div className="text-2xl font-bold">₹11,000</div>
               <p className="text-xs text-muted-foreground">Due this week</p>
             </CardContent>
-          </Card>
-        </div>
+          </ResponsiveCard>
+        </ResponsiveGrid>
 
         <Tabs defaultValue="inventory" className="mb-8">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-4">
             <TabsTrigger value="inventory">Inventory</TabsTrigger>
             <TabsTrigger value="supply-chain">Supply Chain</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
@@ -149,63 +168,127 @@ const RetailerDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-2">Product</th>
-                        <th className="text-left py-3 px-2">Quantity</th>
-                        <th className="text-left py-3 px-2">Source</th>
-                        <th className="text-left py-3 px-2">Purchase Date</th>
-                        <th className="text-left py-3 px-2">Expiry Date</th>
-                        <th className="text-left py-3 px-2">Price</th>
-                        <th className="text-left py-3 px-2">Verification</th>
-                        <th className="text-left py-3 px-2">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {inventoryItems.map((item) => (
-                        <tr key={item.id} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-2">{item.product}</td>
-                          <td className="py-3 px-2">{item.quantity}</td>
-                          <td className="py-3 px-2">{item.source}</td>
-                          <td className="py-3 px-2">{item.purchaseDate}</td>
-                          <td className="py-3 px-2">{item.expiryDate}</td>
-                          <td className="py-3 px-2">{item.price}</td>
-                          <td className="py-3 px-2">
+                  <div className="hidden md:block">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-3 px-2">Product</th>
+                          <th className="text-left py-3 px-2">Quantity</th>
+                          <th className="text-left py-3 px-2">Source</th>
+                          <th className="text-left py-3 px-2">Purchase Date</th>
+                          <th className="text-left py-3 px-2">Expiry Date</th>
+                          <th className="text-left py-3 px-2">Price</th>
+                          <th className="text-left py-3 px-2">Verification</th>
+                          <th className="text-left py-3 px-2">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {inventoryItems.map((item) => (
+                          <tr key={item.id} className="border-b hover:bg-muted/50">
+                            <td className="py-3 px-2">{item.product}</td>
+                            <td className="py-3 px-2">{item.quantity}</td>
+                            <td className="py-3 px-2">{item.source}</td>
+                            <td className="py-3 px-2">{item.purchaseDate}</td>
+                            <td className="py-3 px-2">{item.expiryDate}</td>
+                            <td className="py-3 px-2">{item.price}</td>
+                            <td className="py-3 px-2">
+                              {item.verified ? (
+                                <Badge className="bg-green-500">Verified</Badge>
+                              ) : (
+                                <Badge variant="outline" className="border-orange-500 text-orange-500">Pending</Badge>
+                              )}
+                            </td>
+                            <td className="py-3 px-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => verifyProduct(item)}
+                                className="mr-2"
+                              >
+                                <ShieldCheck className="h-3 w-3 mr-1" /> Verify
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="mr-2"
+                                onClick={() => updateInventory(item.id, 'remove', 10)}
+                              >
+                                Update
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {/* Mobile view for inventory items */}
+                  <div className="md:hidden space-y-4">
+                    {inventoryItems.map((item) => (
+                      <ResponsiveCard key={item.id} fullWidthOnMobile className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="font-medium">{item.product}</h3>
+                            <p className="text-sm text-muted-foreground">{item.quantity} at {item.price}</p>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <Button className="w-full md:w-auto" type="button">
+                              Add to Inventory
+                            </Button>
                             {item.verified ? (
                               <Badge className="bg-green-500">Verified</Badge>
                             ) : (
                               <Badge variant="outline" className="border-orange-500 text-orange-500">Pending</Badge>
                             )}
-                          </td>
-                          <td className="py-3 px-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => verifyProduct(item)}
-                              className="mr-2"
-                            >
-                              <ShieldCheck className="h-3 w-3 mr-1" /> Verify
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className="mr-2"
-                              onClick={() => updateInventory(item.id, 'remove', 10)}
-                            >
-                              Update
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                          <div>
+                            <p className="text-muted-foreground">Source:</p>
+                            <p className="truncate">{item.source}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Purchase:</p>
+                            <p>{item.purchaseDate}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Expiry:</p>
+                            <p>{item.expiryDate}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Farmer Share:</p>
+                            <p>{item.farmerShare}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => verifyProduct(item)}
+                            className="flex-1"
+                          >
+                            <ShieldCheck className="h-3 w-3 mr-1" /> Verify
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => updateInventory(item.id, 'remove', 10)}
+                          >
+                            Update
+                          </Button>
+                        </div>
+                      </ResponsiveCard>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
-            </Card>
+            </ResponsiveCard>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
+            <ResponsiveGrid cols={1} colsMd={2} gap={6}>
+              <ResponsiveCard fullWidthOnMobile>
                 <CardHeader>
                   <CardTitle>Low Stock Alert</CardTitle>
                   <CardDescription>Products that need to be restocked soon</CardDescription>
@@ -249,9 +332,9 @@ const RetailerDashboard = () => {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+              </ResponsiveCard>
               
-              <Card>
+              <ResponsiveCard fullWidthOnMobile>
                 <CardHeader>
                   <CardTitle>Add New Inventory</CardTitle>
                   <CardDescription>Record new products in your inventory</CardDescription>
@@ -300,17 +383,17 @@ const RetailerDashboard = () => {
                       </div>
                     </div>
                     
-                    <Button type="submit" className="bg-green-600 hover:bg-green-700 w-full">
+                    <Button className="w-full md:w-auto bg-green-600 hover:bg-green-700" type="button">
                       Add to Inventory
                     </Button>
                   </form>
                 </CardContent>
-              </Card>
+              </ResponsiveCard>
             </div>
           </TabsContent>
           
           <TabsContent value="supply-chain" className="space-y-4">
-            <Card>
+            <ResponsiveCard fullWidthOnMobile>
               <CardHeader>
                 <CardTitle>Supply Chain Verification</CardTitle>
                 <CardDescription>Verify the complete journey of your products</CardDescription>
@@ -318,8 +401,8 @@ const RetailerDashboard = () => {
               <CardContent>
                 <div className="space-y-6">
                   {inventoryItems.map((item) => (
-                    <div key={item.id} className="border rounded-lg p-4 hover:bg-muted/50">
-                      <div className="flex flex-col md:flex-row justify-between mb-4">
+                    <ResponsiveCard key={item.id} fullWidthOnMobile className="p-4 hover:bg-muted/50">
+                      <ResponsiveLayout mobileDirection="col" desktopDirection="row" justify="between" className="mb-4">
                         <div>
                           <h3 className="font-medium text-lg">{item.product}</h3>
                           <p className="text-sm text-muted-foreground">{item.quantity} • Purchased on {item.purchaseDate}</p>
@@ -331,7 +414,7 @@ const RetailerDashboard = () => {
                             <Badge variant="outline" className="border-orange-500 text-orange-500">Verification Pending</Badge>
                           )}
                         </div>
-                      </div>
+                      </ResponsiveLayout>
                       
                       <div className="relative">
                         <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 z-0"></div>
@@ -370,7 +453,7 @@ const RetailerDashboard = () => {
                         </div>
                       </div>
                       
-                      <div className="mt-4 flex justify-between items-center">
+                      <ResponsiveLayout mobileDirection="col" desktopDirection="row" justify="between" align="center" className="mt-4 gap-4">
                         <div>
                           <p className="text-sm font-medium">Farmer's Fair Share: {item.farmerShare}</p>
                           <p className="text-xs text-muted-foreground">Blockchain verified payment distribution</p>
@@ -379,11 +462,12 @@ const RetailerDashboard = () => {
                           variant="outline" 
                           size="sm"
                           onClick={() => verifyProduct(item)}
+                          className="w-full md:w-auto"
                         >
                           <ShieldCheck className="h-3 w-3 mr-1" /> View Blockchain Record
                         </Button>
-                      </div>
-                    </div>
+                      </ResponsiveLayout>
+                    </ResponsiveCard>
                   ))}
                 </div>
               </CardContent>
@@ -391,49 +475,80 @@ const RetailerDashboard = () => {
           </TabsContent>
           
           <TabsContent value="payments" className="space-y-4">
-            <Card>
+            <ResponsiveCard fullWidthOnMobile>
               <CardHeader>
                 <CardTitle>Pending Payments</CardTitle>
                 <CardDescription>Smart contract settlements with distributors</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-2">Distributor</th>
-                        <th className="text-left py-3 px-2">Amount</th>
-                        <th className="text-left py-3 px-2">Due Date</th>
-                        <th className="text-left py-3 px-2">Items</th>
-                        <th className="text-left py-3 px-2">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pendingPayments.map((payment) => (
-                        <tr key={payment.id} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-2">{payment.distributor}</td>
-                          <td className="py-3 px-2">{payment.amount}</td>
-                          <td className="py-3 px-2">{payment.dueDate}</td>
-                          <td className="py-3 px-2">{payment.items}</td>
-                          <td className="py-3 px-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => initiatePayment(payment.id)}
-                              className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
-                            >
-                              <DollarSign className="h-3 w-3 mr-1" /> Pay Now
-                            </Button>
-                          </td>
+                  {/* Desktop view */}
+                  <div className="hidden md:block">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-3 px-2">Distributor</th>
+                          <th className="text-left py-3 px-2">Amount</th>
+                          <th className="text-left py-3 px-2">Due Date</th>
+                          <th className="text-left py-3 px-2">Items</th>
+                          <th className="text-left py-3 px-2">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {pendingPayments.map((payment) => (
+                          <tr key={payment.id} className="border-b hover:bg-muted/50">
+                            <td className="py-3 px-2">{payment.distributor}</td>
+                            <td className="py-3 px-2">{payment.amount}</td>
+                            <td className="py-3 px-2">{payment.dueDate}</td>
+                            <td className="py-3 px-2">{payment.items}</td>
+                            <td className="py-3 px-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => initiatePayment(payment.id)}
+                                className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
+                              >
+                                <DollarSign className="h-3 w-3 mr-1" /> Pay Now
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {/* Mobile view */}
+                  <div className="md:hidden space-y-4">
+                    {pendingPayments.map((payment) => (
+                      <ResponsiveCard key={payment.id} fullWidthOnMobile className="p-4">
+                        <ResponsiveLayout mobileDirection="col" className="gap-3">
+                          <div className="flex justify-between">
+                            <div>
+                              <h3 className="font-medium">{payment.distributor}</h3>
+                              <p className="text-sm text-muted-foreground">{payment.items}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium">{payment.amount}</p>
+                              <p className="text-sm text-muted-foreground">Due: {payment.dueDate}</p>
+                            </div>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => initiatePayment(payment.id)}
+                            className="w-full bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
+                          >
+                            <DollarSign className="h-3 w-3 mr-1" /> Pay Now
+                          </Button>
+                        </ResponsiveLayout>
+                      </ResponsiveCard>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card>
+            <ResponsiveCard fullWidthOnMobile>
               <CardHeader>
                 <CardTitle>Payment History</CardTitle>
                 <CardDescription>Recent transactions and settlements</CardDescription>
@@ -493,7 +608,7 @@ const RetailerDashboard = () => {
           </TabsContent>
           
           <TabsContent value="insights" className="space-y-4">
-            <Card>
+            <ResponsiveCard fullWidthOnMobile>
               <CardHeader>
                 <CardTitle>Demand Insights</CardTitle>
                 <CardDescription>AI-powered forecasts and market trends</CardDescription>
@@ -502,29 +617,29 @@ const RetailerDashboard = () => {
                 <div className="space-y-6">
                   <div className="border rounded-lg p-4">
                     <h3 className="font-medium text-lg mb-2">Seasonal Demand Forecast</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <ResponsiveGrid cols={1} mdCols={3} gap={4} className="mb-4">
                       <div className="bg-green-50 p-3 rounded-lg">
                         <p className="font-medium">Wheat Flour</p>
-                        <p className="text-2xl font-bold text-green-600">+15%</p>
+                        <p className="text-xl md:text-2xl font-bold text-green-600">+15%</p>
                         <p className="text-sm text-muted-foreground">Expected increase in next 30 days</p>
                       </div>
                       
                       <div className="bg-amber-50 p-3 rounded-lg">
                         <p className="font-medium">Basmati Rice</p>
-                        <p className="text-2xl font-bold text-amber-600">+5%</p>
+                        <p className="text-xl md:text-2xl font-bold text-amber-600">+5%</p>
                         <p className="text-sm text-muted-foreground">Expected increase in next 30 days</p>
                       </div>
                       
                       <div className="bg-red-50 p-3 rounded-lg">
                         <p className="font-medium">Fresh Tomatoes</p>
-                        <p className="text-2xl font-bold text-red-600">-10%</p>
+                        <p className="text-xl md:text-2xl font-bold text-red-600">-10%</p>
                         <p className="text-sm text-muted-foreground">Expected decrease in next 30 days</p>
                       </div>
-                    </div>
+                    </ResponsiveGrid>
                     <p className="text-sm text-muted-foreground">Based on historical data, seasonal patterns, and current market trends</p>
                   </div>
                   
-                  <div className="border rounded-lg p-4">
+                  <ResponsiveCard className="border rounded-lg p-4">
                     <h3 className="font-medium text-lg mb-2">Recommended Actions</h3>
                     <ul className="space-y-2">
                       <li className="flex items-start">
@@ -552,9 +667,9 @@ const RetailerDashboard = () => {
                         <p className="text-sm">Maintain current Basmati Rice inventory levels with small incremental orders</p>
                       </li>
                     </ul>
-                  </div>
+                  </ResponsiveCard>
                   
-                  <div className="border rounded-lg p-4">
+                  <ResponsiveCard className="border rounded-lg p-4">
                     <h3 className="font-medium text-lg mb-2">Market Price Trends</h3>
                     <div className="space-y-3">
                       <div>
@@ -600,7 +715,7 @@ const RetailerDashboard = () => {
           </DialogHeader>
           {currentProduct && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <ResponsiveGrid cols={1} mdCols={2} gap={4}>
                 <div>
                   <p className="text-sm font-medium">Product</p>
                   <p>{currentProduct.product}</p>
@@ -648,11 +763,11 @@ const RetailerDashboard = () => {
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => setIsVerifyDialogOpen(false)} variant="outline">Close</Button>
+            <Button onClick={() => setIsVerifyDialogOpen(false)} variant="outline" className="w-full md:w-auto">Close</Button>
             <Button onClick={() => {
               setIsVerifyDialogOpen(false);
               // In a real app, this would download the verification certificate
-            }} className="bg-green-600 hover:bg-green-700">Download Certificate</Button>
+            }} className="w-full md:w-auto bg-green-600 hover:bg-green-700">Download Certificate</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -666,7 +781,7 @@ const RetailerDashboard = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <ResponsiveGrid cols={1} mdCols={2} gap={4}>
               <div>
                 <p className="text-sm font-medium">Distributor</p>
                 <p>Agri Distributors</p>
@@ -718,11 +833,11 @@ const RetailerDashboard = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={() => setIsPaymentDialogOpen(false)} variant="outline">Cancel</Button>
+            <Button onClick={() => setIsPaymentDialogOpen(false)} variant="outline" className="w-full md:w-auto">Cancel</Button>
             <Button onClick={() => {
               setIsPaymentDialogOpen(false);
               alert('Payment completed successfully!');
-            }} className="bg-green-600 hover:bg-green-700">Confirm Payment</Button>
+            }} className="w-full md:w-auto bg-green-600 hover:bg-green-700">Confirm Payment</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

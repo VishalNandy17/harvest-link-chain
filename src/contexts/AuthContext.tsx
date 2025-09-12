@@ -53,43 +53,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Fetch user profile from Supabase
+  // Cache for user profiles to reduce database calls
+  const profileCache = new Map<string, {profile: UserProfile, timestamp: number}>();
+  const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+  // Fetch user profile from Supabase with caching
   const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-
-    if (error) {
-      console.error('Error fetching profile:', error)
-      return null
+    // Check if we have a cached profile that's not expired
+    const now = Date.now();
+    const cachedData = profileCache.get(userId);
+    
+    if (cachedData && (now - cachedData.timestamp < CACHE_EXPIRY)) {
+      return cachedData.profile;
     }
+    
+    // If no valid cache, fetch from database
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
 
-    return data as UserProfile
+      if (error) {
+        console.error('Error fetching profile:', error)
+        return null
+      }
+
+      // Cache the result
+      const profile = data as UserProfile;
+      profileCache.set(userId, {profile, timestamp: now});
+      return profile;
+    } catch (error) {
+      console.error('Exception fetching profile:', error);
+      return null;
+    }
   }
 
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setSession(session)
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        const userProfile = await fetchProfile(session.user.id)
-        setProfile(userProfile)
-        setUserRole(userProfile?.role || null)
-      }
-      
-      setLoading(false)
-    }
-
-    getInitialSession()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
         setSession(session)
         setUser(session?.user ?? null)
         
@@ -97,12 +102,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const userProfile = await fetchProfile(session.user.id)
           setProfile(userProfile)
           setUserRole(userProfile?.role || null)
-        } else {
-          setProfile(null)
-          setUserRole(null)
         }
-        
+      } catch (error) {
+        console.error('Error during authentication:', error)
+      } finally {
+        // Ensure loading is set to false even if there's an error
         setLoading(false)
+      }
+    }
+
+    getInitialSession()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        try {
+          setLoading(true) // Set loading to true when auth state changes
+          setSession(session)
+          setUser(session?.user ?? null)
+          
+          if (session?.user) {
+            const userProfile = await fetchProfile(session.user.id)
+            setProfile(userProfile)
+            setUserRole(userProfile?.role || null)
+          } else {
+            setProfile(null)
+            setUserRole(null)
+          }
+        } catch (error) {
+          console.error('Error during auth state change:', error)
+        } finally {
+          // Ensure loading is set to false even if there's an error
+          setLoading(false)
+        }
       }
     )
 
