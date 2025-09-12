@@ -25,11 +25,12 @@ const ConsumerDashboard = () => {
   // Ensure this dashboard is only accessible to consumers
   useEffect(() => {
     // Only redirect if we're not loading and the user role doesn't match
-    if (!loading && userRole !== UserRole.consumer && userRole !== UserRole.admin) {
+    if (!loading && userRole !== UserRole.CONSUMER && userRole !== UserRole.ADMIN) {
       // Redirect to appropriate dashboard based on role
       navigate('/', { replace: true });
     }
   }, [userRole, loading, navigate]);
+  
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   const [isProductDetailOpen, setIsProductDetailOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -111,7 +112,7 @@ const ConsumerDashboard = () => {
 
   const openFeedbackForm = (product: any) => {
     setCurrentProduct(product);
-    setIsFeedbackForm(true);
+    setIsFeedbackOpen(true);
   };
 
   const submitFeedback = () => {
@@ -121,8 +122,8 @@ const ConsumerDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 p-4 md:p-6">
-      <ResponsiveContainer maxWidth="7xl" paddingX="0" paddingXMd="0">
+    <ResponsiveContainer maxWidth="7xl" paddingX="0" paddingXMd="0">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 p-4 md:p-6">
         <ResponsiveLayout 
           mobileDirection="col" 
           desktopDirection="row" 
@@ -258,7 +259,7 @@ const ConsumerDashboard = () => {
                             <p className="text-sm font-medium">{scan.farmerShare}</p>
                           </div>
                         </div>
-                      </div>
+                      </ResponsiveGrid>
                     </ResponsiveCard>
                   ))}
                   
@@ -391,7 +392,7 @@ const ConsumerDashboard = () => {
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            </ResponsiveGrid>
           </TabsContent>
           
           <TabsContent value="feedback" className="space-y-4">
@@ -418,7 +419,7 @@ const ConsumerDashboard = () => {
                       </div>
                     </div>
                     <p className="text-sm">"Excellent quality flour! I could really taste the difference in my chapatis. Knowing that the farmer received a fair share makes it even better."</p>
-                  </div>
+                  </ResponsiveCard>
                   
                   <ResponsiveCard className="p-4" hoverable>
                     <div className="flex justify-between items-start mb-2">
@@ -442,7 +443,7 @@ const ConsumerDashboard = () => {
                       </div>
                     </div>
                     <p className="text-sm">"Good quality rice with nice aroma. Grains remain separate after cooking. Would have given 5 stars but a few broken grains were present."</p>
-                  </div>
+                  </ResponsiveCard>
                   
                   <ResponsiveCard className="p-4" hoverable>
                     <div className="flex justify-between items-start mb-2">
@@ -466,239 +467,240 @@ const ConsumerDashboard = () => {
                       </div>
                     </div>
                     <p className="text-sm">"The tomatoes were fresh but ripened too quickly. I appreciate being able to trace them back to the farmer though."</p>
-                  </div>
+                  </ResponsiveCard>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-      
-      <Dialog open={isQRScannerOpen} onOpenChange={setIsQRScannerOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Scan QR Code</DialogTitle>
-            <DialogDescription>
-              Scan a QR code to verify product authenticity and view its journey.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center justify-center py-4 space-y-4">
-            <div className="w-64 h-64 bg-gray-200 flex items-center justify-center border-2 border-dashed border-gray-400 rounded-md">
-              <Search className="h-12 w-12 text-gray-400" />
-              <p className="text-gray-500 text-center">Camera access required</p>
+        
+        {/* Dialogs */}
+        <Dialog open={isQRScannerOpen} onOpenChange={setIsQRScannerOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Scan QR Code</DialogTitle>
+              <DialogDescription>
+                Scan a QR code to verify product authenticity and view its journey.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col items-center justify-center py-4 space-y-4">
+              <div className="w-64 h-64 bg-gray-200 flex items-center justify-center border-2 border-dashed border-gray-400 rounded-md">
+                <Search className="h-12 w-12 text-gray-400" />
+                <p className="text-gray-500 text-center">Camera access required</p>
+              </div>
+              <p className="text-sm text-muted-foreground">Position the QR code within the frame to scan</p>
             </div>
-            <p className="text-sm text-muted-foreground">Position the QR code within the frame to scan</p>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setIsQRScannerOpen(false)} variant="outline">Cancel</Button>
-            <Button onClick={() => {
-              setIsQRScannerOpen(false);
-              // Simulate a successful scan
-              viewProductDetails(recentScans[0]);
-            }}>Scan Manually</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={isProductDetailOpen} onOpenChange={setIsProductDetailOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Product Journey</DialogTitle>
-            <DialogDescription>
-              Farm-to-fork journey visualization with blockchain verification.
-            </DialogDescription>
-          </DialogHeader>
-          {currentProduct && (
-            <div className="space-y-6">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                <div>
-                  <h2 className="text-xl font-bold">{currentProduct.product}</h2>
-                  <p className="text-muted-foreground">{currentProduct.brand}</p>
-                </div>
-                <Badge className="mt-2 md:mt-0 bg-green-500">Blockchain Verified</Badge>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="border rounded-lg p-3">
-                  <p className="text-sm font-medium text-muted-foreground">Origin</p>
-                  <p className="font-medium">{currentProduct.origin}</p>
-                  <p className="text-sm">{currentProduct.farmer} (Farmer)</p>
+            <DialogFooter>
+              <Button onClick={() => setIsQRScannerOpen(false)} variant="outline">Cancel</Button>
+              <Button onClick={() => {
+                setIsQRScannerOpen(false);
+                // Simulate a successful scan
+                viewProductDetails(recentScans[0]);
+              }}>Scan Manually</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isProductDetailOpen} onOpenChange={setIsProductDetailOpen}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Product Journey</DialogTitle>
+              <DialogDescription>
+                Farm-to-fork journey visualization with blockchain verification.
+              </DialogDescription>
+            </DialogHeader>
+            {currentProduct && (
+              <div className="space-y-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                  <div>
+                    <h2 className="text-xl font-bold">{currentProduct.product}</h2>
+                    <p className="text-muted-foreground">{currentProduct.brand}</p>
+                  </div>
+                  <Badge className="mt-2 md:mt-0 bg-green-500">Blockchain Verified</Badge>
                 </div>
                 
-                <div className="border rounded-lg p-3">
-                  <p className="text-sm font-medium text-muted-foreground">Harvest Date</p>
-                  <p className="font-medium">{currentProduct.harvestDate}</p>
-                  <p className="text-sm">Quality: Premium</p>
-                </div>
-                
-                <div className="border rounded-lg p-3">
-                  <p className="text-sm font-medium text-muted-foreground">Farmer's Share</p>
-                  <p className="font-medium">{currentProduct.farmerShare}</p>
-                  <p className="text-sm">Fair Trade Certified</p>
-                </div>
-              </div>
-              
-              <div className="border rounded-lg p-4">
-                <h3 className="font-medium mb-4">Complete Product Journey</h3>
-                
-                <div className="relative">
-                  <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 z-0"></div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="border rounded-lg p-3">
+                    <p className="text-sm font-medium text-muted-foreground">Origin</p>
+                    <p className="font-medium">{currentProduct.origin}</p>
+                    <p className="text-sm">{currentProduct.farmer} (Farmer)</p>
+                  </div>
                   
-                  {currentProduct.journey && currentProduct.journey.map((step: any, index: number) => (
-                    <div key={index} className="relative z-10 flex mb-6 last:mb-0">
-                      <div className={cn(
-                        "flex items-center justify-center w-8 h-8 rounded-full mr-4",
-                        index === 0 ? "bg-green-100 text-green-600" : 
-                        index === 1 ? "bg-blue-100 text-blue-600" :
-                        "bg-purple-100 text-purple-600"
-                      )}>
-                        {index + 1}
+                  <div className="border rounded-lg p-3">
+                    <p className="text-sm font-medium text-muted-foreground">Harvest Date</p>
+                    <p className="font-medium">{currentProduct.harvestDate}</p>
+                    <p className="text-sm">Quality: Premium</p>
+                  </div>
+                  
+                  <div className="border rounded-lg p-3">
+                    <p className="text-sm font-medium text-muted-foreground">Farmer's Share</p>
+                    <p className="font-medium">{currentProduct.farmerShare}</p>
+                    <p className="text-sm">Fair Trade Certified</p>
+                  </div>
+                </div>
+                
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-medium mb-4">Complete Product Journey</h3>
+                  
+                  <div className="relative">
+                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 z-0"></div>
+                    
+                    {currentProduct.journey && currentProduct.journey.map((step: any, index: number) => (
+                      <div key={index} className="relative z-10 flex mb-6 last:mb-0">
+                        <div className={cn(
+                          "flex items-center justify-center w-8 h-8 rounded-full mr-4",
+                          index === 0 ? "bg-green-100 text-green-600" : 
+                          index === 1 ? "bg-blue-100 text-blue-600" :
+                          "bg-purple-100 text-purple-600"
+                        )}>
+                          {index + 1}
+                        </div>
+                        <div className={cn(
+                          "rounded-lg p-3 flex-grow",
+                          index === 0 ? "bg-green-50" : 
+                          index === 1 ? "bg-blue-50" :
+                          "bg-purple-50"
+                        )}>
+                          <p className="font-medium">{step.stage}</p>
+                          <p className="text-sm">{step.location}</p>
+                          <p className="text-sm text-muted-foreground">{step.date}</p>
+                          
+                          {index === 0 && (
+                            <div className="mt-2 flex items-center">
+                              <Badge variant="outline" className="border-green-500 text-green-600 mr-2">Organic</Badge>
+                              <Badge variant="outline" className="border-green-500 text-green-600">Pesticide-Free</Badge>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className={cn(
-                        "rounded-lg p-3 flex-grow",
-                        index === 0 ? "bg-green-50" : 
-                        index === 1 ? "bg-blue-50" :
-                        "bg-purple-50"
-                      )}>
-                        <p className="font-medium">{step.stage}</p>
-                        <p className="text-sm">{step.location}</p>
-                        <p className="text-sm text-muted-foreground">{step.date}</p>
-                        
-                        {index === 0 && (
-                          <div className="mt-2 flex items-center">
-                            <Badge variant="outline" className="border-green-500 text-green-600 mr-2">Organic</Badge>
-                            <Badge variant="outline" className="border-green-500 text-green-600">Pesticide-Free</Badge>
-                          </div>
-                        )}
+                    ))}
+                    
+                    <div className="relative z-10 flex">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-600 mr-4">
+                        {currentProduct.journey ? currentProduct.journey.length + 1 : 4}
+                      </div>
+                      <div className="bg-amber-50 rounded-lg p-3 flex-grow">
+                        <p className="font-medium">Consumer</p>
+                        <p className="text-sm">You</p>
+                        <p className="text-sm text-muted-foreground">{currentProduct.scannedDate}</p>
                       </div>
                     </div>
+                  </div>
+                </div>
+                
+                <div className="border rounded-md p-4 bg-muted/50">
+                  <p className="text-sm font-medium mb-2">Blockchain Verification</p>
+                  <p className="text-xs font-mono break-all">0x7f9e8d7c6b5a4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d</p>
+                </div>
+                
+                <div className="border rounded-md p-4 bg-green-50">
+                  <div className="flex items-center">
+                    <ShieldCheck className="h-5 w-5 text-green-600 mr-2" />
+                    <p className="text-sm font-medium text-green-600">Verified Authentic Product</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">This product has been verified through our blockchain system and confirmed to be authentic with complete traceability.</p>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button onClick={() => setIsProductDetailOpen(false)} variant="outline">Close</Button>
+              <Button onClick={() => {
+                setIsProductDetailOpen(false);
+                setIsFeedbackOpen(true);
+              }} className="bg-purple-600 hover:bg-purple-700">Rate Product</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Rate & Review</DialogTitle>
+              <DialogDescription>
+                Share your experience with this product.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="rating" className="text-center block mb-2">Rating</Label>
+                <div className="flex justify-center space-x-1 mb-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={cn(
+                        "h-8 w-8 cursor-pointer",
+                        i < rating ? "text-yellow-500 fill-yellow-500" : "text-gray-300"
+                      )}
+                      onClick={() => setRating(i + 1)}
+                    />
                   ))}
+                </div>
+                <p className="text-center text-sm text-muted-foreground">
+                  {rating === 1 && "Poor"}
+                  {rating === 2 && "Fair"}
+                  {rating === 3 && "Good"}
+                  {rating === 4 && "Very Good"}
+                  {rating === 5 && "Excellent"}
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="review">Your Review</Label>
+                <Textarea id="review" placeholder="Share your experience with this product..." rows={4} />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Quality Aspects</Label>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm">Freshness</span>
+                      <span className="text-sm">{rating}/5</span>
+                    </div>
+                    <Slider
+                      defaultValue={[rating]}
+                      max={5}
+                      step={1}
+                      onValueChange={(value) => {}}
+                    />
+                  </div>
                   
-                  <div className="relative z-10 flex">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-600 mr-4">
-                      {currentProduct.journey ? currentProduct.journey.length + 1 : 4}
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm">Taste</span>
+                      <span className="text-sm">{rating}/5</span>
                     </div>
-                    <div className="bg-amber-50 rounded-lg p-3 flex-grow">
-                      <p className="font-medium">Consumer</p>
-                      <p className="text-sm">You</p>
-                      <p className="text-sm text-muted-foreground">{currentProduct.scannedDate}</p>
+                    <Slider
+                      defaultValue={[rating]}
+                      max={5}
+                      step={1}
+                      onValueChange={(value) => {}}
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm">Value for Money</span>
+                      <span className="text-sm">{rating}/5</span>
                     </div>
+                    <Slider
+                      defaultValue={[rating]}
+                      max={5}
+                      step={1}
+                      onValueChange={(value) => {}}
+                    />
                   </div>
                 </div>
               </div>
-              
-              <div className="border rounded-md p-4 bg-muted/50">
-                <p className="text-sm font-medium mb-2">Blockchain Verification</p>
-                <p className="text-xs font-mono break-all">0x7f9e8d7c6b5a4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d</p>
-              </div>
-              
-              <div className="border rounded-md p-4 bg-green-50">
-                <div className="flex items-center">
-                  <ShieldCheck className="h-5 w-5 text-green-600 mr-2" />
-                  <p className="text-sm font-medium text-green-600">Verified Authentic Product</p>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">This product has been verified through our blockchain system and confirmed to be authentic with complete traceability.</p>
-              </div>
             </div>
-          )}
-          <DialogFooter>
-            <Button onClick={() => setIsProductDetailOpen(false)} variant="outline">Close</Button>
-            <Button onClick={() => {
-              setIsProductDetailOpen(false);
-              setIsFeedbackOpen(true);
-            }} className="bg-purple-600 hover:bg-purple-700">Rate Product</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rate & Review</DialogTitle>
-            <DialogDescription>
-              Share your experience with this product.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="rating" className="text-center block mb-2">Rating</Label>
-              <div className="flex justify-center space-x-1 mb-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={cn(
-                      "h-8 w-8 cursor-pointer",
-                      i < rating ? "text-yellow-500 fill-yellow-500" : "text-gray-300"
-                    )}
-                    onClick={() => setRating(i + 1)}
-                  />
-                ))}
-              </div>
-              <p className="text-center text-sm text-muted-foreground">
-                {rating === 1 && "Poor"}
-                {rating === 2 && "Fair"}
-                {rating === 3 && "Good"}
-                {rating === 4 && "Very Good"}
-                {rating === 5 && "Excellent"}
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="review">Your Review</Label>
-              <Textarea id="review" placeholder="Share your experience with this product..." rows={4} />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Quality Aspects</Label>
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm">Freshness</span>
-                    <span className="text-sm">{rating}/5</span>
-                  </div>
-                  <Slider
-                    defaultValue={[rating]}
-                    max={5}
-                    step={1}
-                    onValueChange={(value) => {}}
-                  />
-                </div>
-                
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm">Taste</span>
-                    <span className="text-sm">{rating}/5</span>
-                  </div>
-                  <Slider
-                    defaultValue={[rating]}
-                    max={5}
-                    step={1}
-                    onValueChange={(value) => {}}
-                  />
-                </div>
-                
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm">Value for Money</span>
-                    <span className="text-sm">{rating}/5</span>
-                  </div>
-                  <Slider
-                    defaultValue={[rating]}
-                    max={5}
-                    step={1}
-                    onValueChange={(value) => {}}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setIsFeedbackOpen(false)} variant="outline">Cancel</Button>
-            <Button onClick={submitFeedback} className="bg-purple-600 hover:bg-purple-700">Submit Feedback</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            <DialogFooter>
+              <Button onClick={() => setIsFeedbackOpen(false)} variant="outline">Cancel</Button>
+              <Button onClick={submitFeedback} className="bg-purple-600 hover:bg-purple-700">Submit Feedback</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </ResponsiveContainer>
   );
 };
 

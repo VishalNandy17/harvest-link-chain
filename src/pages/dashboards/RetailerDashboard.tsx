@@ -23,11 +23,12 @@ const RetailerDashboard = () => {
   // Ensure this dashboard is only accessible to retailers
   useEffect(() => {
     // Only redirect if we're not loading and the user role doesn't match
-    if (!loading && userRole !== UserRole.retailer && userRole !== UserRole.admin) {
+    if (!loading && userRole !== UserRole.RETAILER && userRole !== UserRole.ADMIN) {
       // Redirect to appropriate dashboard based on role
       navigate('/', { replace: true });
     }
   }, [userRole, loading, navigate]);
+  
   const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<any>(null);
@@ -91,8 +92,8 @@ const RetailerDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 p-4 md:p-6">
-      <ResponsiveContainer maxWidth="7xl" paddingX="0" paddingXMd="0">
+    <ResponsiveContainer maxWidth="7xl" paddingX="0" paddingXMd="0">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 p-4 md:p-6">
         <ResponsiveLayout 
           mobileDirection="col" 
           desktopDirection="row" 
@@ -285,7 +286,7 @@ const RetailerDashboard = () => {
                   </div>
                 </div>
               </CardContent>
-            </ResponsiveCard>
+            </Card>
             
             <ResponsiveGrid cols={1} colsMd={2} gap={6}>
               <ResponsiveCard fullWidthOnMobile>
@@ -389,7 +390,7 @@ const RetailerDashboard = () => {
                   </form>
                 </CardContent>
               </ResponsiveCard>
-            </div>
+            </ResponsiveGrid>
           </TabsContent>
           
           <TabsContent value="supply-chain" className="space-y-4">
@@ -471,7 +472,7 @@ const RetailerDashboard = () => {
                   ))}
                 </div>
               </CardContent>
-            </Card>
+            </ResponsiveCard>
           </TabsContent>
           
           <TabsContent value="payments" className="space-y-4">
@@ -546,7 +547,7 @@ const RetailerDashboard = () => {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </ResponsiveCard>
             
             <ResponsiveCard fullWidthOnMobile>
               <CardHeader>
@@ -604,7 +605,7 @@ const RetailerDashboard = () => {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </ResponsiveCard>
           </TabsContent>
           
           <TabsContent value="insights" className="space-y-4">
@@ -617,7 +618,7 @@ const RetailerDashboard = () => {
                 <div className="space-y-6">
                   <div className="border rounded-lg p-4">
                     <h3 className="font-medium text-lg mb-2">Seasonal Demand Forecast</h3>
-                    <ResponsiveGrid cols={1} mdCols={3} gap={4} className="mb-4">
+                    <ResponsiveGrid cols={1} colsMd={3} gap={4} className="mb-4">
                       <div className="bg-green-50 p-3 rounded-lg">
                         <p className="font-medium">Wheat Flour</p>
                         <p className="text-xl md:text-2xl font-bold text-green-600">+15%</p>
@@ -697,151 +698,152 @@ const RetailerDashboard = () => {
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground mt-3">Prices compared to 30-day average</p>
-                  </div>
+                  </ResponsiveCard>
                 </div>
               </CardContent>
-            </Card>
+            </ResponsiveCard>
           </TabsContent>
         </Tabs>
-      </div>
-      
-      <Dialog open={isVerifyDialogOpen} onOpenChange={setIsVerifyDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Supply Chain Verification</DialogTitle>
-            <DialogDescription>
-              Complete blockchain record for this product's journey from farm to retail.
-            </DialogDescription>
-          </DialogHeader>
-          {currentProduct && (
+        
+        {/* Dialogs */}
+        <Dialog open={isVerifyDialogOpen} onOpenChange={setIsVerifyDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Supply Chain Verification</DialogTitle>
+              <DialogDescription>
+                Complete blockchain record for this product's journey from farm to retail.
+              </DialogDescription>
+            </DialogHeader>
+            {currentProduct && (
+              <div className="space-y-4">
+                <ResponsiveGrid cols={1} colsMd={2} gap={4}>
+                  <div>
+                    <p className="text-sm font-medium">Product</p>
+                    <p>{currentProduct.product}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Source</p>
+                    <p>{currentProduct.source}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Purchase Date</p>
+                    <p>{currentProduct.purchaseDate}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Farmer's Share</p>
+                    <p>{currentProduct.farmerShare}</p>
+                  </div>
+                </ResponsiveGrid>
+                
+                <div className="border rounded-md p-4 bg-muted/50">
+                  <p className="text-sm font-medium mb-2">Blockchain Verification</p>
+                  <p className="text-xs font-mono break-all">0x7f9e8d7c6b5a4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d</p>
+                  <div className="mt-3 space-y-2">
+                    <div className="flex justify-between">
+                      <p className="text-xs">Farm Transaction:</p>
+                      <p className="text-xs font-mono">0x1a2b3c4d5e...</p>
+                    </div>
+                    <div className="flex justify-between">
+                      <p className="text-xs">Distributor Transaction:</p>
+                      <p className="text-xs font-mono">0x6f7e8d9c0b...</p>
+                    </div>
+                    <div className="flex justify-between">
+                      <p className="text-xs">Retail Transaction:</p>
+                      <p className="text-xs font-mono">0x2c3d4e5f6g...</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="border rounded-md p-4 bg-green-50">
+                  <div className="flex items-center">
+                    <ShieldCheck className="h-5 w-5 text-green-600 mr-2" />
+                    <p className="text-sm font-medium text-green-600">Verified Authentic Product</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">This product has been verified through our blockchain system and confirmed to be authentic with complete traceability.</p>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button onClick={() => setIsVerifyDialogOpen(false)} variant="outline" className="w-full md:w-auto">Close</Button>
+              <Button onClick={() => {
+                setIsVerifyDialogOpen(false);
+                // In a real app, this would download the verification certificate
+              }} className="w-full md:w-auto bg-green-600 hover:bg-green-700">Download Certificate</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Smart Contract Payment</DialogTitle>
+              <DialogDescription>
+                Complete payment to distributor with blockchain verification.
+              </DialogDescription>
+            </DialogHeader>
             <div className="space-y-4">
-              <ResponsiveGrid cols={1} mdCols={2} gap={4}>
+              <ResponsiveGrid cols={1} colsMd={2} gap={4}>
                 <div>
-                  <p className="text-sm font-medium">Product</p>
-                  <p>{currentProduct.product}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Source</p>
-                  <p>{currentProduct.source}</p>
+                  <p className="text-sm font-medium">Distributor</p>
+                  <p>Agri Distributors</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Purchase Date</p>
-                  <p>{currentProduct.purchaseDate}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Farmer's Share</p>
-                  <p>{currentProduct.farmerShare}</p>
-                </div>
-              </div>
-              
-              <div className="border rounded-md p-4 bg-muted/50">
-                <p className="text-sm font-medium mb-2">Blockchain Verification</p>
-                <p className="text-xs font-mono break-all">0x7f9e8d7c6b5a4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d</p>
-                <div className="mt-3 space-y-2">
-                  <div className="flex justify-between">
-                    <p className="text-xs">Farm Transaction:</p>
-                    <p className="text-xs font-mono">0x1a2b3c4d5e...</p>
-                  </div>
-                  <div className="flex justify-between">
-                    <p className="text-xs">Distributor Transaction:</p>
-                    <p className="text-xs font-mono">0x6f7e8d9c0b...</p>
-                  </div>
-                  <div className="flex justify-between">
-                    <p className="text-xs">Retail Transaction:</p>
-                    <p className="text-xs font-mono">0x2c3d4e5f6g...</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="border rounded-md p-4 bg-green-50">
-                <div className="flex items-center">
-                  <ShieldCheck className="h-5 w-5 text-green-600 mr-2" />
-                  <p className="text-sm font-medium text-green-600">Verified Authentic Product</p>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">This product has been verified through our blockchain system and confirmed to be authentic with complete traceability.</p>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button onClick={() => setIsVerifyDialogOpen(false)} variant="outline" className="w-full md:w-auto">Close</Button>
-            <Button onClick={() => {
-              setIsVerifyDialogOpen(false);
-              // In a real app, this would download the verification certificate
-            }} className="w-full md:w-auto bg-green-600 hover:bg-green-700">Download Certificate</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Smart Contract Payment</DialogTitle>
-            <DialogDescription>
-              Complete payment to distributor with blockchain verification.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <ResponsiveGrid cols={1} mdCols={2} gap={4}>
-              <div>
-                <p className="text-sm font-medium">Distributor</p>
-                <p>Agri Distributors</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Amount</p>
-                <p>₹5,000</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Items</p>
-                <p>Wheat Flour (200 kg)</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Due Date</p>
-                <p>2023-11-05</p>
-              </div>
-            </div>
-            
-            <div className="border rounded-md p-4 bg-muted/50">
-              <p className="text-sm font-medium mb-2">Payment Breakdown</p>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <p className="text-sm">Distributor Share:</p>
-                  <p className="text-sm">₹1,000 (20%)</p>
-                </div>
-                <div className="flex justify-between">
-                  <p className="text-sm">Farmer Share:</p>
-                  <p className="text-sm">₹4,000 (80%)</p>
-                </div>
-                <div className="border-t pt-2 mt-2 flex justify-between font-medium">
-                  <p>Total:</p>
+                  <p className="text-sm font-medium">Amount</p>
                   <p>₹5,000</p>
                 </div>
+                <div>
+                  <p className="text-sm font-medium">Items</p>
+                  <p>Wheat Flour (200 kg)</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Due Date</p>
+                  <p>2023-11-05</p>
+                </div>
+              </ResponsiveGrid>
+              
+              <div className="border rounded-md p-4 bg-muted/50">
+                <p className="text-sm font-medium mb-2">Payment Breakdown</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <p className="text-sm">Distributor Share:</p>
+                    <p className="text-sm">₹1,000 (20%)</p>
+                  </div>
+                  <div className="flex justify-between">
+                    <p className="text-sm">Farmer Share:</p>
+                    <p className="text-sm">₹4,000 (80%)</p>
+                  </div>
+                  <div className="border-t pt-2 mt-2 flex justify-between font-medium">
+                    <p>Total:</p>
+                    <p>₹5,000</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="payment-method">Payment Method</Label>
+                <Select>
+                  <SelectTrigger id="payment-method">
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bank-transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="crypto">Cryptocurrency</SelectItem>
+                    <SelectItem value="upi">UPI</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="payment-method">Payment Method</Label>
-              <Select>
-                <SelectTrigger id="payment-method">
-                  <SelectValue placeholder="Select payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bank-transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="crypto">Cryptocurrency</SelectItem>
-                  <SelectItem value="upi">UPI</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setIsPaymentDialogOpen(false)} variant="outline" className="w-full md:w-auto">Cancel</Button>
-            <Button onClick={() => {
-              setIsPaymentDialogOpen(false);
-              alert('Payment completed successfully!');
-            }} className="w-full md:w-auto bg-green-600 hover:bg-green-700">Confirm Payment</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            <DialogFooter>
+              <Button onClick={() => setIsPaymentDialogOpen(false)} variant="outline" className="w-full md:w-auto">Cancel</Button>
+              <Button onClick={() => {
+                setIsPaymentDialogOpen(false);
+                alert('Payment completed successfully!');
+              }} className="w-full md:w-auto bg-green-600 hover:bg-green-700">Confirm Payment</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </ResponsiveContainer>
   );
 };
 

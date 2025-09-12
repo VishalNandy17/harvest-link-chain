@@ -46,31 +46,31 @@ const App = () => (
             
             {/* Role-specific dashboard routes */}
             <Route path="/dashboards/farmer" element={
-              <ProtectedRoute allowedRoles={[UserRole.farmer, UserRole.admin]}>
+              <ProtectedRoute allowedRoles={[UserRole.FARMER, UserRole.ADMIN]}>
                 <FarmerDashboard />
               </ProtectedRoute>
             } />
             
             <Route path="/dashboards/distributor" element={
-              <ProtectedRoute allowedRoles={[UserRole.distributor, UserRole.admin]}>
+              <ProtectedRoute allowedRoles={[UserRole.DISTRIBUTOR, UserRole.ADMIN]}>
                 <DistributorDashboard />
               </ProtectedRoute>
             } />
             
             <Route path="/dashboards/retailer" element={
-              <ProtectedRoute allowedRoles={[UserRole.retailer, UserRole.admin]}>
+              <ProtectedRoute allowedRoles={[UserRole.RETAILER, UserRole.ADMIN]}>
                 <RetailerDashboard />
               </ProtectedRoute>
             } />
             
             <Route path="/dashboards/consumer" element={
-              <ProtectedRoute allowedRoles={[UserRole.consumer, UserRole.admin]}>
+              <ProtectedRoute allowedRoles={[UserRole.CONSUMER, UserRole.ADMIN]}>
                 <ConsumerDashboard />
               </ProtectedRoute>
             } />
             
             <Route path="/dashboards/admin" element={
-              <ProtectedRoute allowedRoles={[UserRole.admin]}>
+              <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
                 <AdminDashboard />
               </ProtectedRoute>
             } />
