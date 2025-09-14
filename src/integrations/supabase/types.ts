@@ -14,7 +14,296 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      batches: {
+        Row: {
+          batch_number: string
+          created_at: string
+          crop_id: string
+          id: string
+          price_per_unit: number
+          qr_code: string
+          quantity: number
+          status: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          batch_number: string
+          created_at?: string
+          crop_id: string
+          id?: string
+          price_per_unit: number
+          qr_code: string
+          quantity: number
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string
+          created_at?: string
+          crop_id?: string
+          id?: string
+          price_per_unit?: number
+          qr_code?: string
+          quantity?: number
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batches_crop_id_fkey"
+            columns: ["crop_id"]
+            isOneToOne: false
+            referencedRelation: "crops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blockchain_records: {
+        Row: {
+          batch_id: string | null
+          data: Json
+          hash: string
+          id: string
+          previous_hash: string | null
+          record_type: string
+          timestamp: string
+          transaction_id: string | null
+          verified: boolean
+        }
+        Insert: {
+          batch_id?: string | null
+          data: Json
+          hash: string
+          id?: string
+          previous_hash?: string | null
+          record_type: string
+          timestamp?: string
+          transaction_id?: string | null
+          verified?: boolean
+        }
+        Update: {
+          batch_id?: string | null
+          data?: Json
+          hash?: string
+          id?: string
+          previous_hash?: string | null
+          record_type?: string
+          timestamp?: string
+          transaction_id?: string | null
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blockchain_records_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blockchain_records_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crops: {
+        Row: {
+          certifications: string[] | null
+          created_at: string
+          description: string | null
+          farmer_id: string
+          harvest_date: string | null
+          id: string
+          location: string | null
+          name: string
+          predicted_price: number | null
+          price_per_unit: number
+          quantity: number
+          status: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          certifications?: string[] | null
+          created_at?: string
+          description?: string | null
+          farmer_id: string
+          harvest_date?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          predicted_price?: number | null
+          price_per_unit: number
+          quantity: number
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          certifications?: string[] | null
+          created_at?: string
+          description?: string | null
+          farmer_id?: string
+          harvest_date?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          predicted_price?: number | null
+          price_per_unit?: number
+          quantity?: number
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crops_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_predictions: {
+        Row: {
+          confidence_score: number
+          created_at: string
+          crop_name: string
+          current_price: number
+          factors: Json | null
+          id: string
+          predicted_price: number
+          valid_until: string
+        }
+        Insert: {
+          confidence_score: number
+          created_at?: string
+          crop_name: string
+          current_price: number
+          factors?: Json | null
+          id?: string
+          predicted_price: number
+          valid_until: string
+        }
+        Update: {
+          confidence_score?: number
+          created_at?: string
+          crop_name?: string
+          current_price?: number
+          factors?: Json | null
+          id?: string
+          predicted_price?: number
+          valid_until?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          phone: string | null
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          phone?: string | null
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string | null
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          batch_id: string
+          buyer_id: string
+          created_at: string
+          id: string
+          quantity: number
+          seller_id: string
+          status: string
+          total_price: number
+          transaction_hash: string | null
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          buyer_id: string
+          created_at?: string
+          id?: string
+          quantity: number
+          seller_id: string
+          status?: string
+          total_price: number
+          transaction_hash?: string | null
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          buyer_id?: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          seller_id?: string
+          status?: string
+          total_price?: number
+          transaction_hash?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
