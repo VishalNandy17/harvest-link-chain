@@ -110,7 +110,7 @@ const RetailerDashboard = () => {
           </Button>
         </ResponsiveLayout>
 
-        <ResponsiveGrid cols={1} colsMd={2} colsLg={4} gap={6} className="mb-8">
+        <ResponsiveGrid cols={1} colsMd={2} colsLg={4} gap="6" className="mb-8">
           <ResponsiveCard fullWidthOnMobile>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Inventory</CardTitle>
@@ -288,7 +288,7 @@ const RetailerDashboard = () => {
               </CardContent>
             </Card>
             
-            <ResponsiveGrid cols={1} colsMd={2} gap={6}>
+            <ResponsiveGrid cols={1} colsMd={2} gap="6">
               <ResponsiveCard fullWidthOnMobile>
                 <CardHeader>
                   <CardTitle>Low Stock Alert</CardTitle>
@@ -618,7 +618,7 @@ const RetailerDashboard = () => {
                 <div className="space-y-6">
                   <div className="border rounded-lg p-4">
                     <h3 className="font-medium text-lg mb-2">Seasonal Demand Forecast</h3>
-                    <ResponsiveGrid cols={1} colsMd={3} gap={4} className="mb-4">
+                    <ResponsiveGrid cols={1} colsMd={3} gap="4" className="mb-4">
                       <div className="bg-green-50 p-3 rounded-lg">
                         <p className="font-medium">Wheat Flour</p>
                         <p className="text-xl md:text-2xl font-bold text-green-600">+15%</p>
@@ -716,7 +716,7 @@ const RetailerDashboard = () => {
             </DialogHeader>
             {currentProduct && (
               <div className="space-y-4">
-                <ResponsiveGrid cols={1} colsMd={2} gap={4}>
+                <ResponsiveGrid cols={1} colsMd={2} gap="4">
                   <div>
                     <p className="text-sm font-medium">Product</p>
                     <p>{currentProduct.product}</p>
@@ -782,7 +782,7 @@ const RetailerDashboard = () => {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <ResponsiveGrid cols={1} colsMd={2} gap={4}>
+              <ResponsiveGrid cols={1} colsMd={2} gap="4">
                 <div>
                   <p className="text-sm font-medium">Distributor</p>
                   <p>Agri Distributors</p>

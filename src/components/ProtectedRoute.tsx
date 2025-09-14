@@ -28,19 +28,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
   // If specific roles are required and user doesn't have the right role
   if (allowedRoles && allowedRoles.length > 0 && userRole && !allowedRoles.includes(userRole)) {
     // Redirect to the appropriate dashboard based on user role
-    if (userRole === UserRole.farmer) {
-      return <Navigate to="/dashboards/farmer" replace />
-    } else if (userRole === UserRole.distributor) {
-      return <Navigate to="/dashboards/distributor" replace />
-    } else if (userRole === UserRole.retailer) {
-      return <Navigate to="/dashboards/retailer" replace />
-    } else if (userRole === UserRole.consumer) {
-      return <Navigate to="/dashboards/consumer" replace />
-    } else if (userRole === UserRole.admin) {
-      return <Navigate to="/dashboards/admin" replace />
-    } else {
-      // Fallback to general dashboard if role is unknown
-      return <Navigate to="/" replace />
+    switch (userRole) {
+      case UserRole.FARMER:
+        return <Navigate to="/dashboards/farmer" replace />
+      case UserRole.DISTRIBUTOR:
+        return <Navigate to="/dashboards/distributor" replace />
+      case UserRole.RETAILER:
+        return <Navigate to="/dashboards/retailer" replace />
+      case UserRole.CONSUMER:
+        return <Navigate to="/dashboards/consumer" replace />
+      case UserRole.ADMIN:
+        return <Navigate to="/dashboards/admin" replace />
+      default:
+        // Fallback to general dashboard if role is unknown
+        return <Navigate to="/" replace />
     }
   }
 

@@ -41,7 +41,7 @@ const AdminDashboard = () => {
   // Ensure this dashboard is only accessible to admins
   useEffect(() => {
     // Only redirect if we're not loading and the user role doesn't match
-    if (!loading && userRole !== UserRole.admin) {
+    if (!loading && userRole !== UserRole.ADMIN) {
       // Redirect to appropriate dashboard based on role
       navigate('/', { replace: true });
     }

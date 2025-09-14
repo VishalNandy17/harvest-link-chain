@@ -21,7 +21,7 @@ const DistributorDashboard = () => {
   // Ensure this dashboard is only accessible to distributors
   useEffect(() => {
     // Only redirect if we're not loading and the user role doesn't match
-    if (!loading && userRole !== UserRole.distributor && userRole !== UserRole.admin) {
+    if (!loading && userRole !== UserRole.DISTRIBUTOR && userRole !== UserRole.ADMIN) {
       // Redirect to appropriate dashboard based on role
       navigate('/', { replace: true });
     }

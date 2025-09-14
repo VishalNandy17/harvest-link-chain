@@ -25,7 +25,7 @@ const FarmerDashboard = () => {
   // Ensure this dashboard is only accessible to farmers
   useEffect(() => {
     // Only redirect if we're not loading and the user role doesn't match
-    if (!loading && userRole !== UserRole.farmer && userRole !== UserRole.admin) {
+    if (!loading && userRole !== UserRole.FARMER && userRole !== UserRole.ADMIN) {
       // Redirect to appropriate dashboard based on role
       navigate('/', { replace: true });
     }

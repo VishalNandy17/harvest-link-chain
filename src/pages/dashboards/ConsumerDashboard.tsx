@@ -229,7 +229,7 @@ const ConsumerDashboard = () => {
                         </div>
                        </ResponsiveLayout>
                       
-                      <ResponsiveGrid cols={1} colsMd={3} gap={4}>
+                      <ResponsiveGrid cols={1} colsMd={3} gap="4">
                         <div className="flex items-center space-x-2">
                           <div className="bg-blue-100 p-1.5 rounded-full">
                             <Leaf className="h-4 w-4 text-blue-600" />
@@ -309,7 +309,7 @@ const ConsumerDashboard = () => {
               </CardContent>
             </Card>
             
-            <ResponsiveGrid cols={1} colsMd={2} gap={6}>
+            <ResponsiveGrid cols={1} colsMd={2} gap="6">
               <Card>
                 <CardHeader>
                   <CardTitle>Expiry Reminders</CardTitle>

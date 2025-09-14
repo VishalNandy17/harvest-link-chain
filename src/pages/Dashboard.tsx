@@ -14,19 +14,19 @@ const Dashboard = () => {
       const redirectTimer = setTimeout(() => {
         // Redirect based on user role
         switch (userRole) {
-          case UserRole.farmer:
+          case UserRole.FARMER:
             navigate("/dashboards/farmer", { replace: true });
             break;
-          case UserRole.distributor:
+          case UserRole.DISTRIBUTOR:
             navigate("/dashboards/distributor", { replace: true });
             break;
-          case UserRole.retailer:
+          case UserRole.RETAILER:
             navigate("/dashboards/retailer", { replace: true });
             break;
-          case UserRole.consumer:
+          case UserRole.CONSUMER:
             navigate("/dashboards/consumer", { replace: true });
             break;
-          case UserRole.admin:
+          case UserRole.ADMIN:
             navigate("/dashboards/admin", { replace: true });
             break;
           default:
