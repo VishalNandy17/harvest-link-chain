@@ -18,7 +18,7 @@ import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 // Role-specific dashboards
-import FarmerDashboard from "@/pages/dashboards/FarmerDashboardV2";
+import FarmerDashboard from "@/pages/dashboards/FarmerDashboard";
 import DistributorDashboard from "@/pages/dashboards/DistributorDashboard";
 import RetailerDashboard from "@/pages/dashboards/RetailerDashboard";
 import ConsumerDashboard from "@/pages/dashboards/ConsumerDashboard";
