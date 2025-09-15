@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Package, TrendingUp, QrCode, BarChart3, DollarSign, ShieldCheck, Search, ShoppingCart, Truck, History } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 const RetailerDashboard = () => {
   const { user, profile, userRole, loading } = useAuth();

@@ -16,7 +16,7 @@ import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { QrCode, Search, ShieldCheck, Star, ThumbsUp, Leaf, Clock, Truck, History, Heart } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 const ConsumerDashboard = () => {
   const { user, profile, userRole, loading } = useAuth();

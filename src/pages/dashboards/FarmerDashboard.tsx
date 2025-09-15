@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Tractor, TrendingUp, QrCode, Leaf, BarChart3, DollarSign, Clock, AlertCircle } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 const FarmerDashboard = () => {
   const { user, profile, userRole, loading } = useAuth();
