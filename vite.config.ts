@@ -17,9 +17,26 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'pwa-192x192.svg', 'pwa-512x512.svg'],
-      strategies: 'generateSW',
+      strategies: 'injectManifest',
+      srcDir: 'public',
+      filename: 'sw.js',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg}'],
+        skipWaiting: true,
+        clientsClaim: true,
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/api\.example\.com\//,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+              },
+            },
+          },
+        ],
       },
       manifest: {
         name: 'Harvest Link Chain',

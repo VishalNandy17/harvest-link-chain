@@ -85,57 +85,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const handleAuthStateChange = async (event: string, session: Session | null) => {
     console.log('Auth state change:', event, session?.user?.id)
     
-    setSession(session)
-    setUser(session?.user ?? null)
-    
-    if (session?.user) {
-      // User is authenticated, fetch profile
-      const userProfile = await fetchProfile(session.user.id)
-      setProfile(userProfile)
-      setUserRole(userProfile?.role || null)
-    } else {
-      // User is not authenticated, clear profile
-      setProfile(null)
-      setUserRole(null)
+    try {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // User is authenticated, fetch profile
+        const userProfile = await fetchProfile(session.user.id);
+        setProfile(userProfile);
+        setUserRole(userProfile?.role || null);
+      } else {
+        // User is not authenticated, clear profile
+        setProfile(null);
+        setUserRole(null);
+      }
+    } catch (error) {
+      console.error('Error in auth state change handler:', error);
+    } finally {
+      // Always set loading to false after handling auth state
+      setLoading(false);
     }
-    
-    // Always set loading to false after handling auth state
-    setLoading(false)
   }
 
   useEffect(() => {
     console.log('AuthProvider: Setting up auth state listener')
     
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange)
-
-    // Get initial session
+    // Get initial session first
     const getInitialSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
+        setLoading(true);
+        const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Error getting initial session:', error)
-          setLoading(false)
-          return
+          console.error('Error getting initial session:', error);
+          setLoading(false);
+          return;
         }
 
-        console.log('Initial session:', session?.user?.id)
+        console.log('Initial session:', session?.user?.id);
         
-        // Manually trigger auth state change for initial session
-        await handleAuthStateChange('INITIAL_SESSION', session)
+        // Set the initial session
+        if (session) {
+          await handleAuthStateChange('INITIAL_SESSION', session);
+        }
       } catch (error) {
-        console.error('Exception getting initial session:', error)
-        setLoading(false)
+        console.error('Exception getting initial session:', error);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
 
-    getInitialSession()
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        await handleAuthStateChange(event, session);
+      }
+    );
+
+    // Fetch the initial session
+    getInitialSession();
 
     return () => {
-      console.log('AuthProvider: Cleaning up auth state listener')
-      subscription.unsubscribe()
-    }
+      console.log('AuthProvider: Cleaning up auth state listener');
+      subscription.unsubscribe();
+    };
   }, [])
 
   const signUp = async (email: string, password: string, userData: { firstName: string; lastName: string; role: UserRole }) => {
@@ -186,7 +200,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      
+      // Clear local state
+      setUser(null)
+      setSession(null)
+      setProfile(null)
+      setUserRole(null)
+      
+      // Redirect to login page after successful sign out
+      window.location.href = '/login'
+    } catch (error) {
+      console.error('Error signing out:', error)
+      throw error // Re-throw to allow error handling in components
+    }
   }
 
   const resetPassword = async (email: string) => {

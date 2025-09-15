@@ -75,9 +75,20 @@ export const Navigation = () => {
                     <Link to="/profile">Profile</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={signOut} className="text-red-600">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
+                  <DropdownMenuItem asChild>
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        signOut().catch(error => {
+                          console.error('Error during sign out:', error);
+                        });
+                      }}
+                      className="w-full text-left flex items-center text-red-600 px-2 py-1.5 text-sm"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </button>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -133,7 +144,15 @@ export const Navigation = () => {
                         Dashboard
                       </Button>
                     </Link>
-                    <button onClick={signOut} className="mx-4">
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        signOut().catch(error => {
+                          console.error('Error during sign out:', error);
+                        });
+                      }} 
+                      className="mx-4 w-full"
+                    >
                       <Button variant="outline" size="sm" className="w-full text-red-600 hover:text-red-700">
                         Sign Out
                       </Button>
