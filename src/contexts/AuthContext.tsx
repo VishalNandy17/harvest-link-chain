@@ -52,23 +52,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(false)
 
-  // Cache for user profiles to reduce database calls
-  const profileCache = new Map<string, {profile: UserProfile, timestamp: number}>();
-  const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes in milliseconds
-
-  // Fetch user profile from Supabase with caching
-  const fetchProfile = async (userId: string) => {
-    // Check if we have a cached profile that's not expired
-    const now = Date.now();
-    const cachedData = profileCache.get(userId);
-    
-    if (cachedData && (now - cachedData.timestamp < CACHE_EXPIRY)) {
-      return cachedData.profile;
-    }
-    
-    // If no valid cache, fetch from database
+  // Fetch user profile from Supabase
+  const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
     try {
+      setProfileLoading(true)
+      console.log('Fetching profile for user:', userId)
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -80,65 +71,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return null
       }
 
-      // Cache the result
-      const profile = data as UserProfile;
-      profileCache.set(userId, {profile, timestamp: now});
-      return profile;
+      console.log('Profile fetched successfully:', data)
+      return data as UserProfile
     } catch (error) {
-      console.error('Exception fetching profile:', error);
-      return null;
+      console.error('Exception fetching profile:', error)
+      return null
+    } finally {
+      setProfileLoading(false)
     }
   }
 
+  // Handle auth state changes
+  const handleAuthStateChange = async (event: string, session: Session | null) => {
+    console.log('Auth state change:', event, session?.user?.id)
+    
+    setSession(session)
+    setUser(session?.user ?? null)
+    
+    if (session?.user) {
+      // User is authenticated, fetch profile
+      const userProfile = await fetchProfile(session.user.id)
+      setProfile(userProfile)
+      setUserRole(userProfile?.role || null)
+    } else {
+      // User is not authenticated, clear profile
+      setProfile(null)
+      setUserRole(null)
+    }
+    
+    // Always set loading to false after handling auth state
+    setLoading(false)
+  }
+
   useEffect(() => {
+    console.log('AuthProvider: Setting up auth state listener')
+    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange)
+
     // Get initial session
     const getInitialSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        setSession(session)
-        setUser(session?.user ?? null)
+        const { data: { session }, error } = await supabase.auth.getSession()
         
-        if (session?.user) {
-          const userProfile = await fetchProfile(session.user.id)
-          setProfile(userProfile)
-          setUserRole(userProfile?.role || null)
+        if (error) {
+          console.error('Error getting initial session:', error)
+          setLoading(false)
+          return
         }
+
+        console.log('Initial session:', session?.user?.id)
+        
+        // Manually trigger auth state change for initial session
+        await handleAuthStateChange('INITIAL_SESSION', session)
       } catch (error) {
-        console.error('Error during authentication:', error)
-      } finally {
-        // Ensure loading is set to false even if there's an error
+        console.error('Exception getting initial session:', error)
         setLoading(false)
       }
     }
 
     getInitialSession()
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        try {
-          setLoading(true) // Set loading to true when auth state changes
-          setSession(session)
-          setUser(session?.user ?? null)
-          
-          if (session?.user) {
-            const userProfile = await fetchProfile(session.user.id)
-            setProfile(userProfile)
-            setUserRole(userProfile?.role || null)
-          } else {
-            setProfile(null)
-            setUserRole(null)
-          }
-        } catch (error) {
-          console.error('Error during auth state change:', error)
-        } finally {
-          // Ensure loading is set to false even if there's an error
-          setLoading(false)
-        }
-      }
-    )
-
-    return () => subscription.unsubscribe()
+    return () => {
+      console.log('AuthProvider: Cleaning up auth state listener')
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signUp = async (email: string, password: string, userData: { firstName: string; lastName: string; role: UserRole }) => {
@@ -153,9 +150,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
     })
-
-    // Note: The profile will be created automatically via the database trigger
-    // that we set up in the Supabase SQL
 
     return { error }
   }
@@ -172,11 +166,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error) throw error
       
       // Refresh the profile after update
-      if (user) {
-        const updatedProfile = await fetchProfile(user.id)
-        setProfile(updatedProfile)
-        setUserRole(updatedProfile?.role || null)
-      }
+      const updatedProfile = await fetchProfile(user.id)
+      setProfile(updatedProfile)
+      setUserRole(updatedProfile?.role || null)
       
       return { error: null }
     } catch (error) {
@@ -215,7 +207,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     session,
     profile,
-    loading,
+    loading: loading || profileLoading,
     userRole,
     signUp,
     signIn,
