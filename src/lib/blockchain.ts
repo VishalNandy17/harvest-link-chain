@@ -291,19 +291,19 @@ class BlockchainService {
 
   // Add role constants
   get FARMER_ROLE() {
-    return '0x' + Buffer.from('FARMER_ROLE').toString('hex').padStart(64, '0');
+    return ethers.id('FARMER_ROLE');
   }
 
   get DISTRIBUTOR_ROLE() {
-    return '0x' + Buffer.from('DISTRIBUTOR_ROLE').toString('hex').padStart(64, '0');
+    return ethers.id('DISTRIBUTOR_ROLE');
   }
 
   get RETAILER_ROLE() {
-    return '0x' + Buffer.from('RETAILER_ROLE').toString('hex').padStart(64, '0');
+    return ethers.id('RETAILER_ROLE');
   }
 
   get CONSUMER_ROLE() {
-    return '0x' + Buffer.from('CONSUMER_ROLE').toString('hex').padStart(64, '0');
+    return ethers.id('CONSUMER_ROLE');
   }
 
   async getCurrentAccount(): Promise<string | null> {

@@ -505,6 +505,39 @@ const FarmerDashboard = () => {
           </div>
         </div>
 
+        {!walletConnected && (
+          <Card className="mb-8 border-blue-200 bg-blue-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg text-blue-800">Connect MetaMask to Get Started</CardTitle>
+              <CardDescription className="text-blue-700">
+                Connect your wallet to create products and batches on the blockchain.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+              <div className="text-sm text-blue-800/90">
+                Ensure MetaMask is installed in your browser. You must have the Farmer role to proceed.
+              </div>
+              <Button 
+                onClick={handleConnectWallet}
+                disabled={isLoading}
+                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Connect MetaMask
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
