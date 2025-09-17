@@ -45,6 +45,8 @@ const FarmerDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [offchainBatches, setOffchainBatches] = useState<Array<{ id: string; qr: string; createdAt: string; location: string; productCount: number }>>([]);
+  const [offchainProduce, setOffchainProduce] = useState<Array<{ id: string; crop: string; quantity: string; date: string; price: string; status: string; qr: string }>>([]);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
@@ -324,6 +326,33 @@ const FarmerDashboard = () => {
           setCurrentQRCode(img);
         } catch (_) {}
         setIsQRDialogOpen(true);
+
+        // Update My Batches (off-chain entry)
+        const batchId = resp?.batch?.id || `${Date.now()}`;
+        setOffchainBatches(prev => [
+          {
+            id: String(batchId),
+            qr,
+            createdAt: resp?.batch?.created_at || new Date().toISOString(),
+            location: cropPayload.location,
+            productCount: 1
+          },
+          ...prev
+        ]);
+
+        // Update My Produce Listings (off-chain entry)
+        setOffchainProduce(prev => [
+          {
+            id: String(batchId),
+            crop: cropPayload.name,
+            quantity: `${cropPayload.quantity} ${cropPayload.unit}`,
+            date: new Date().toLocaleDateString(),
+            price: `₹${cropPayload.pricePerUnit}`,
+            status: 'Listed',
+            qr
+          },
+          ...prev
+        ]);
       }
       toast({
         title: 'Crop submitted',
@@ -729,6 +758,43 @@ const FarmerDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
+                      {/* Off-chain produce listings */}
+                      {offchainProduce.map((item) => (
+                        <tr key={`off-${item.id}`} className="border-b hover:bg-muted/50">
+                          <td className="py-3 px-2">{item.crop}</td>
+                          <td className="py-3 px-2">{item.quantity}</td>
+                          <td className="py-3 px-2">{item.date}</td>
+                          <td className="py-3 px-2">{item.price}</td>
+                          <td className="py-3 px-2">
+                            <Badge 
+                              variant="outline" 
+                              className={cn(
+                                item.status === 'Listed' && 'border-blue-500 text-blue-500',
+                                item.status === 'Sold' && 'border-green-500 text-green-500',
+                                item.status === 'In Transit' && 'border-orange-500 text-orange-500'
+                              )}
+                            >
+                              {item.status}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={async () => {
+                                setQrType('batch');
+                                setCurrentQRData(item.qr);
+                                try { setCurrentQRCode(await generateQRCodeDataURL(item.qr)); } catch(_) {}
+                                setIsQRDialogOpen(true);
+                              }}
+                              className="mr-2"
+                            >
+                              <QrCode className="h-3 w-3 mr-1" /> QR Code
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                      {/* On-chain produce listings */}
                       {recentProduceListings.map((item) => (
                         <tr key={item.id} className="border-b hover:bg-muted/50">
                           <td className="py-3 px-2">{item.crop}</td>
@@ -787,7 +853,7 @@ const FarmerDashboard = () => {
                   </Button>
                 </div>
                 
-                {batches.length === 0 ? (
+                {batches.length === 0 && offchainBatches.length === 0 ? (
                   <div className="text-center py-8">
                     <Tractor className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No batches yet</h3>
@@ -803,6 +869,38 @@ const FarmerDashboard = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
+                    {/* Off-chain batches */}
+                    {offchainBatches.map((batch) => (
+                      <div key={`off-${batch.id}`} className="border rounded-lg p-4 hover:bg-muted/50">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-medium">Batch #{batch.id}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {batch.productCount} products • Created {new Date(batch.createdAt).toLocaleDateString()}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Location: {batch.location}
+                            </p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={async () => {
+                                setQrType('batch');
+                                setCurrentQRData(batch.qr);
+                                try { setCurrentQRCode(await generateQRCodeDataURL(batch.qr)); } catch(_) {}
+                                setIsQRDialogOpen(true);
+                              }}
+                            >
+                              <QrCode className="h-3 w-3 mr-1" /> QR Code
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* On-chain batches */}
                     {batches.map((batch) => (
                       <div key={batch.id} className="border rounded-lg p-4 hover:bg-muted/50">
                         <div className="flex justify-between items-start">
