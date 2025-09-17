@@ -78,7 +78,7 @@ export const PWAInstallPrompt: React.FC = () => {
           </div>
           <div className="flex-1">
             <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-              Install HarvestChain
+              Install KrishiSetu
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Install this app on your device for quick and easy access

@@ -58,7 +58,7 @@ export const Navigation = () => {
             </div>
             <div>
               <span className="text-2xl font-bold bg-gradient-to-r from-farm-primary to-blockchain-blue bg-clip-text text-transparent">
-                HarvestLink
+                KrishiSetu
               </span>
               <div className="text-xs text-muted-foreground tracking-wide">BLOCKCHAIN TRANSPARENCY</div>
             </div>

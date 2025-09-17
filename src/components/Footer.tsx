@@ -12,7 +12,7 @@ export const Footer = () => {
                 <Leaf className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-xl font-bold">HarvestLink</h3>
+                <h3 className="text-xl font-bold">KrishiSetu</h3>
                 <p className="text-sm text-white/80">Blockchain Agriculture</p>
               </div>
             </div>
@@ -63,7 +63,7 @@ export const Footer = () => {
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <Mail className="w-5 h-5 text-white/80" />
-                <span className="text-white/90">hello@harvestlink.io</span>
+                <span className="text-white/90">hello@krishisetu.io</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="w-5 h-5 text-white/80" />
@@ -92,7 +92,7 @@ export const Footer = () => {
 
         <div className="border-t border-white/20 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-white/80 text-sm">
-            © 2024 HarvestLink. All rights reserved. Built with blockchain technology for agricultural transparency.
+            © 2024 KrishiSetu. All rights reserved. Built with blockchain technology for agricultural transparency.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
             <a href="#" className="text-white/80 hover:text-white text-sm transition-colors">Privacy Policy</a>
