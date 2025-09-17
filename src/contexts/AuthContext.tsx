@@ -89,17 +89,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(session?.user ?? null)
     
     if (session?.user) {
-      // User is authenticated, fetch profile
-      const userProfile = await fetchProfile(session.user.id)
-      setProfile(userProfile)
-      setUserRole(userProfile?.role || null)
+      // Set a fast role from user metadata to avoid loading flashes
+      const metaRole = (session.user.user_metadata as any)?.role as UserRole | undefined
+      if (metaRole) {
+        setUserRole(metaRole)
+      }
+      // Fetch full profile in background and refine role
+      fetchProfile(session.user.id)
+        .then((userProfile) => {
+          setProfile(userProfile)
+          if (userProfile?.role) setUserRole(userProfile.role)
+        })
+        .catch((err) => console.error('Profile fetch error:', err))
     } else {
       // User is not authenticated, clear profile
       setProfile(null)
       setUserRole(null)
     }
     
-    // Always set loading to false after handling auth state
+    // Mark initial load completed immediately after session processed
     setLoading(false)
   }
 
@@ -215,7 +223,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     session,
     profile,
-    loading: loading || profileLoading,
+    loading,
     userRole,
     signUp,
     signIn,
