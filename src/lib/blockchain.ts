@@ -2,7 +2,7 @@ import { ethers, type BrowserProvider, EventLog } from 'ethers';
 import HarvestLinkABI from '../contracts/HarvestLink.json';
 
 // Contract address (replace with your deployed contract address)
-const CONTRACT_ADDRESS = '0x1234...';
+const CONTRACT_ADDRESS = '0x1234567890123456789012345678901234567890';
 
 // Event types
 export type BlockchainEventType = 'ProductCreated' | 'BatchCreated' | 'OwnershipTransferred' | 'StatusUpdated' | 'BatchLocationUpdated' | 'BatchPurchased';
@@ -264,9 +264,46 @@ class BlockchainService {
 
   // Wallet and read/write methods
   async connectWallet(): Promise<string> {
-    const provider = await this.getProvider();
-    const accounts = await provider.send('eth_requestAccounts', []);
-    return accounts[0];
+    try {
+      const provider = await this.getProvider();
+      const accounts = await provider.send('eth_requestAccounts', []);
+      
+      if (accounts.length === 0) {
+        throw new Error('No accounts found');
+      }
+      
+      const account = accounts[0];
+      
+      // Verify the account has the FARMER_ROLE
+      const contract = await this.getContract();
+      const hasFarmerRole = await contract.hasRole(this.FARMER_ROLE, account);
+      
+      if (!hasFarmerRole) {
+        throw new Error('This account does not have FARMER_ROLE. Please contact admin to grant farmer role.');
+      }
+      
+      return account;
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
+      throw error;
+    }
+  }
+
+  // Add role constants
+  get FARMER_ROLE() {
+    return '0x' + Buffer.from('FARMER_ROLE').toString('hex').padStart(64, '0');
+  }
+
+  get DISTRIBUTOR_ROLE() {
+    return '0x' + Buffer.from('DISTRIBUTOR_ROLE').toString('hex').padStart(64, '0');
+  }
+
+  get RETAILER_ROLE() {
+    return '0x' + Buffer.from('RETAILER_ROLE').toString('hex').padStart(64, '0');
+  }
+
+  get CONSUMER_ROLE() {
+    return '0x' + Buffer.from('CONSUMER_ROLE').toString('hex').padStart(64, '0');
   }
 
   async getCurrentAccount(): Promise<string | null> {
@@ -360,14 +397,81 @@ class BlockchainService {
 
   getProductStatus(status: number): string {
     const statuses = [
-      'Pending',
-      'Harvested',
-      'In Transit',
-      'Processed',
-      'Distributed',
-      'Sold',
+      'Harvested',      // 0
+      'Processed',      // 1
+      'Packed',         // 2
+      'ForSale',        // 3
+      'Sold',           // 4
+      'Shipped',        // 5
+      'Received',       // 6
+      'Purchased'       // 7
     ];
     return statuses[status] || 'Unknown';
+  }
+
+  // QR Code generation utilities
+  generateProductQRCode(productId: number): string {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/verify/product/${productId}`;
+  }
+
+  generateBatchQRCode(batchId: number): string {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/verify/batch/${batchId}`;
+  }
+
+  // Generate QR code data URL for display
+  async generateQRCodeDataURL(data: string): Promise<string> {
+    // In a real implementation, you would use a QR code library like qrcode
+    // For now, we'll use a simple API service
+    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data)}`;
+    return qrApiUrl;
+  }
+
+  // Parse QR code data to extract product/batch ID
+  parseQRCodeData(qrData: string): { type: 'product' | 'batch' | 'unknown', id?: number } {
+    try {
+      const url = new URL(qrData);
+      const pathParts = url.pathname.split('/');
+      
+      if (pathParts.includes('product') && pathParts.length > 2) {
+        const id = parseInt(pathParts[pathParts.indexOf('product') + 1]);
+        return { type: 'product', id: isNaN(id) ? undefined : id };
+      }
+      
+      if (pathParts.includes('batch') && pathParts.length > 2) {
+        const id = parseInt(pathParts[pathParts.indexOf('batch') + 1]);
+        return { type: 'batch', id: isNaN(id) ? undefined : id };
+      }
+      
+      return { type: 'unknown' };
+    } catch {
+      return { type: 'unknown' };
+    }
+  }
+
+  // Convert INR to ETH (using a fixed rate for demo - in production, use real exchange rate)
+  convertINRToETH(inrAmount: number): string {
+    // Using approximate rate: 1 ETH = 200,000 INR (adjust as needed)
+    const ethAmount = inrAmount / 200000;
+    return ethAmount.toString();
+  }
+
+  // Convert ETH to INR for display
+  convertETHToINR(ethAmount: string): number {
+    const eth = parseFloat(ethAmount);
+    return eth * 200000; // Using approximate rate
+  }
+
+  // Create product with INR pricing
+  async createProductWithINR(
+    name: string, 
+    description: string, 
+    imageHash: string, 
+    inrPrice: number
+  ): Promise<number> {
+    const ethPrice = this.convertINRToETH(inrPrice);
+    return this.createProduct(name, description, imageHash, ethPrice);
   }
 }
 
@@ -420,4 +524,39 @@ export async function getBatch(batchId: number): Promise<Batch> {
 
 export function getProductStatus(status: number): string {
   return blockchainService.getProductStatus(status);
+}
+
+// QR Code utility exports
+export function generateProductQRCode(productId: number): string {
+  return blockchainService.generateProductQRCode(productId);
+}
+
+export function generateBatchQRCode(batchId: number): string {
+  return blockchainService.generateBatchQRCode(batchId);
+}
+
+export async function generateQRCodeDataURL(data: string): Promise<string> {
+  return blockchainService.generateQRCodeDataURL(data);
+}
+
+export function parseQRCodeData(qrData: string): { type: 'product' | 'batch' | 'unknown', id?: number } {
+  return blockchainService.parseQRCodeData(qrData);
+}
+
+// INR conversion utilities
+export function convertINRToETH(inrAmount: number): string {
+  return blockchainService.convertINRToETH(inrAmount);
+}
+
+export function convertETHToINR(ethAmount: string): number {
+  return blockchainService.convertETHToINR(ethAmount);
+}
+
+export async function createProductWithINR(
+  name: string, 
+  description: string, 
+  imageHash: string, 
+  inrPrice: number
+): Promise<number> {
+  return blockchainService.createProductWithINR(name, description, imageHash, inrPrice);
 }

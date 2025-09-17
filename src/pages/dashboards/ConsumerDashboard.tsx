@@ -16,6 +16,13 @@ import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { QrCode, Search, ShieldCheck, Star, ThumbsUp, Leaf, Clock, Truck, History, Heart } from 'lucide-react';
+import { 
+  verifyProduct, 
+  parseQRCodeData,
+  type Product
+} from '@/lib/blockchain';
+import { QRCodeGenerator } from '@/components/QRCodeGenerator';
+import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const ConsumerDashboard = () => {
@@ -36,6 +43,12 @@ const ConsumerDashboard = () => {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<any>(null);
   const [rating, setRating] = useState(5);
+  const [verificationResult, setVerificationResult] = useState<{
+    valid: boolean;
+    message: string;
+    product?: Product;
+    owners?: string[];
+  } | null>(null);
   
   // Mock data for demonstration
   const recentScans = [
@@ -103,6 +116,56 @@ const ConsumerDashboard = () => {
   const scanQRCode = () => {
     setIsQRScannerOpen(true);
     // In a real app, this would activate the camera for QR scanning
+  };
+
+  const handleQRScan = async (data: string) => {
+    try {
+      const parsed = parseQRCodeData(data);
+      if (parsed.type === 'product' && parsed.id) {
+        const result = await verifyProduct(parsed.id);
+        setVerificationResult({
+          valid: true,
+          message: 'Product verified successfully',
+          product: result.product,
+          owners: result.owners
+        });
+        
+        // Create a mock product object for display
+        const mockProduct = {
+          id: result.product.id,
+          product: result.product.name,
+          brand: 'Verified Brand',
+          scannedDate: new Date().toISOString().split('T')[0],
+          farmer: result.product.farmer,
+          origin: 'Blockchain Verified',
+          harvestDate: new Date(result.product.createdAt * 1000).toISOString().split('T')[0],
+          farmerShare: '80%',
+          verified: true,
+          journey: [
+            { stage: 'Farm', location: 'Verified Farm', date: new Date(result.product.createdAt * 1000).toISOString().split('T')[0] },
+            { stage: 'Processing', location: 'Verified Processor', date: new Date(result.product.createdAt * 1000 + 86400000).toISOString().split('T')[0] },
+            { stage: 'Retail', location: 'Verified Retailer', date: new Date(result.product.createdAt * 1000 + 172800000).toISOString().split('T')[0] }
+          ]
+        };
+        
+        setCurrentProduct(mockProduct);
+        setIsProductDetailOpen(true);
+        setIsQRScannerOpen(false);
+      } else {
+        toast({
+          title: 'Invalid QR Code',
+          description: 'This QR code is not a valid product verification code',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error processing QR code:', error);
+      toast({
+        title: 'Verification Failed',
+        description: 'Unable to verify product. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const viewProductDetails = (product: any) => {
@@ -493,9 +556,8 @@ const ConsumerDashboard = () => {
             <DialogFooter>
               <Button onClick={() => setIsQRScannerOpen(false)} variant="outline">Cancel</Button>
               <Button onClick={() => {
-                setIsQRScannerOpen(false);
-                // Simulate a successful scan
-                viewProductDetails(recentScans[0]);
+                // Simulate a successful scan with a mock QR code
+                handleQRScan('http://localhost:8083/verify/product/1');
               }}>Scan Manually</Button>
             </DialogFooter>
           </DialogContent>

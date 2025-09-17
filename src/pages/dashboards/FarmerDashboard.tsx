@@ -25,9 +25,16 @@ import {
   getProductStatus, 
   connectWallet, 
   getCurrentAccount,
+  generateProductQRCode,
+  generateBatchQRCode,
+  generateQRCodeDataURL,
+  createProductWithINR,
+  convertETHToINR,
+  blockchainService,
   Product,
   Batch
 } from '@/lib/blockchain';
+import { QRCodeGenerator } from '@/components/QRCodeGenerator';
 
 const FarmerDashboard = () => {
   const { user, profile, userRole, loading } = useAuth();
@@ -38,12 +45,15 @@ const FarmerDashboard = () => {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+  const [isCreatingBatch, setIsCreatingBatch] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: '',
     description: '',
     imageHash: '',
     price: '',
   });
+  const [walletAddress, setWalletAddress] = useState<string>('');
   const [newBatch, setNewBatch] = useState({
     productIds: [] as number[],
     location: '',
@@ -53,6 +63,8 @@ const FarmerDashboard = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
   const [currentQRCode, setCurrentQRCode] = useState('');
+  const [currentQRData, setCurrentQRData] = useState('');
+  const [qrType, setQrType] = useState<'product' | 'batch'>('product');
   
   // Ensure this dashboard is only accessible to farmers
   useEffect(() => {
@@ -87,10 +99,55 @@ const FarmerDashboard = () => {
 
   const loadFarmData = async (account: string) => {
     try {
-      // In a real app, you would fetch products and batches associated with this farmer
-      // For now, we'll just set empty arrays
-      setProducts([]);
-      setBatches([]);
+      setIsLoading(true);
+      
+      // Start blockchain event listeners to get real-time updates
+      await blockchainService.startEventListeners();
+      
+      // Listen for new products and batches
+      blockchainService.on('ProductCreated', async (event) => {
+        if (event.data.farmer.toLowerCase() === account.toLowerCase()) {
+          try {
+            const product = await getProduct(event.data.productId);
+            setProducts(prev => [product, ...prev]);
+            toast({
+              title: 'New Product Created',
+              description: `Product "${product.name}" has been added to blockchain`,
+            });
+          } catch (error) {
+            console.error('Error fetching new product:', error);
+          }
+        }
+      });
+
+      blockchainService.on('BatchCreated', async (event) => {
+        if (event.data.creator.toLowerCase() === account.toLowerCase()) {
+          try {
+            const batch = await getBatch(event.data.batchId);
+            setBatches(prev => [batch, ...prev]);
+            
+            // Automatically generate QR code for new batch
+            const qrData = generateBatchQRCode(batch.id);
+            setCurrentQRData(qrData);
+            setQrType('batch');
+            const qrCodeUrl = await generateQRCodeDataURL(qrData);
+            setCurrentQRCode(qrCodeUrl);
+            setIsQRDialogOpen(true);
+            
+            toast({
+              title: 'New Batch Created',
+              description: `Batch #${batch.id} has been created with ${batch.productIds.length} products`,
+            });
+          } catch (error) {
+            console.error('Error fetching new batch:', error);
+          }
+        }
+      });
+
+      // Load existing products and batches
+      await loadExistingProducts(account);
+      await loadExistingBatches(account);
+      
     } catch (error) {
       console.error('Error loading farm data:', error);
       toast({
@@ -98,49 +155,146 @@ const FarmerDashboard = () => {
         description: 'Failed to load farm data',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadExistingProducts = async (account: string) => {
+    try {
+      // Get product count from contract
+      const contract = await blockchainService.getContract();
+      const productCount = await contract.productCount();
+      
+      const farmerProducts: Product[] = [];
+      
+      // Check each product to see if it belongs to this farmer
+      for (let i = 1; i <= productCount; i++) {
+        try {
+          const product = await getProduct(i);
+          if (product.farmer.toLowerCase() === account.toLowerCase()) {
+            farmerProducts.push(product);
+          }
+        } catch (error) {
+          // Product might not exist, continue
+          continue;
+        }
+      }
+      
+      setProducts(farmerProducts);
+    } catch (error) {
+      console.error('Error loading existing products:', error);
+    }
+  };
+
+  const loadExistingBatches = async (account: string) => {
+    try {
+      // Get batch count from contract
+      const contract = await blockchainService.getContract();
+      const batchCount = await contract.batchCount();
+      
+      const farmerBatches: Batch[] = [];
+      
+      // Check each batch to see if it belongs to this farmer
+      for (let i = 1; i <= batchCount; i++) {
+        try {
+          const batch = await getBatch(i);
+          // Check if any of the products in this batch belong to this farmer
+          const batchProducts = await Promise.all(
+            batch.productIds.map(id => getProduct(id).catch(() => null))
+          );
+          
+          const hasFarmerProducts = batchProducts.some(product => 
+            product && product.farmer.toLowerCase() === account.toLowerCase()
+          );
+          
+          if (hasFarmerProducts) {
+            farmerBatches.push(batch);
+          }
+        } catch (error) {
+          // Batch might not exist, continue
+          continue;
+        }
+      }
+      
+      setBatches(farmerBatches);
+    } catch (error) {
+      console.error('Error loading existing batches:', error);
     }
   };
 
   const handleConnectWallet = async () => {
     try {
-      await connectWallet();
+      setIsLoading(true);
+      const address = await connectWallet();
       setWalletConnected(true);
+      setWalletAddress(address);
+      
       toast({
-        title: 'Wallet Connected',
-        description: 'Your wallet has been connected successfully',
+        title: 'MetaMask Connected',
+        description: `Wallet connected successfully! Address: ${address.slice(0, 6)}...${address.slice(-4)}`,
       });
-    } catch (error) {
+      
+      // Load farm data after successful connection
+      await loadFarmData(address);
+    } catch (error: any) {
       console.error('Error connecting wallet:', error);
+      setWalletConnected(false);
+      setWalletAddress('');
+      
       toast({
-        title: 'Error',
-        description: 'Failed to connect wallet',
+        title: 'Connection Failed',
+        description: error.message || 'Failed to connect MetaMask wallet',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleCreateProduct = async () => {
     if (!walletConnected) {
       toast({
-        title: 'Wallet Not Connected',
-        description: 'Please connect your wallet first',
+        title: 'MetaMask Not Connected',
+        description: 'Please connect your MetaMask wallet first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!newProduct.name || !newProduct.description || !newProduct.price) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const inrPrice = parseFloat(newProduct.price);
+    if (isNaN(inrPrice) || inrPrice <= 0) {
+      toast({
+        title: 'Invalid Price',
+        description: 'Please enter a valid INR price',
         variant: 'destructive',
       });
       return;
     }
 
     try {
-      setIsLoading(true);
-      await createProduct(
+      setIsCreatingProduct(true);
+      
+      // Create product on blockchain with INR pricing
+      const productId = await createProductWithINR(
         newProduct.name,
         newProduct.description,
-        newProduct.imageHash,
-        newProduct.price
+        newProduct.imageHash || 'QmDefaultImageHash', // Default IPFS hash
+        inrPrice
       );
       
       toast({
         title: 'Success',
-        description: 'Product created successfully',
+        description: `Product "${newProduct.name}" created successfully with ID: ${productId} for ₹${inrPrice.toLocaleString()}`,
       });
       
       // Reset form and close dialog
@@ -152,20 +306,17 @@ const FarmerDashboard = () => {
       });
       setIsProductDialogOpen(false);
       
-      // Refresh data
-      const account = await getCurrentAccount();
-      if (account) {
-        await loadFarmData(account);
-      }
-    } catch (error) {
+      // The product will be automatically added via event listener
+      
+    } catch (error: any) {
       console.error('Error creating product:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create product',
+        description: error.message || 'Failed to create product. Please check your wallet and try again.',
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setIsCreatingProduct(false);
     }
   };
 
@@ -188,16 +339,27 @@ const FarmerDashboard = () => {
       return;
     }
 
+    if (!newBatch.location) {
+      toast({
+        title: 'Missing Location',
+        description: 'Please specify the batch location',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      setIsLoading(true);
-      await createBatch(
+      setIsCreatingBatch(true);
+      
+      // Create batch on blockchain
+      const batchId = await createBatch(
         newBatch.productIds,
         newBatch.location
       );
       
       toast({
         title: 'Success',
-        description: 'Batch created successfully',
+        description: `Batch #${batchId} created successfully with ${newBatch.productIds.length} products`,
       });
       
       // Reset form and close dialog
@@ -208,20 +370,17 @@ const FarmerDashboard = () => {
       setSelectedProducts([]);
       setIsBatchDialogOpen(false);
       
-      // Refresh data
-      const account = await getCurrentAccount();
-      if (account) {
-        await loadFarmData(account);
-      }
+      // The batch will be automatically added via event listener with QR code generation
+      
     } catch (error) {
       console.error('Error creating batch:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create batch',
+        description: 'Failed to create batch. Please check your wallet and try again.',
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setIsCreatingBatch(false);
     }
   };
 
@@ -233,31 +392,70 @@ const FarmerDashboard = () => {
     );
   };
 
+  // Calculate real statistics from blockchain data
+  const calculateEarnings = () => {
+    const totalValue = products.reduce((sum, product) => {
+      return sum + convertETHToINR(product.price);
+    }, 0);
+    
+    const soldProducts = products.filter(product => product.status >= 4); // Sold or higher
+    const pendingProducts = products.filter(product => product.status < 4);
+    
+    const soldValue = soldProducts.reduce((sum, product) => {
+      return sum + convertETHToINR(product.price);
+    }, 0);
+    
+    const pendingValue = pendingProducts.reduce((sum, product) => {
+      return sum + convertETHToINR(product.price);
+    }, 0);
+    
+    return {
+      total: `₹${totalValue.toLocaleString()}`,
+      pending: `₹${pendingValue.toLocaleString()}`,
+      sold: `₹${soldValue.toLocaleString()}`,
+      activeListings: products.length
+    };
+  };
+
+  const earnings = calculateEarnings();
+
   const cropAdvisory = [
     { crop: 'Wheat', recommendation: 'Ideal planting time in 2 weeks', confidence: 'High' },
     { crop: 'Pulses', recommendation: 'Market demand increasing', confidence: 'Medium' },
     { crop: 'Vegetables', recommendation: 'Consider greenhouse cultivation', confidence: 'High' },
   ];
 
-  const earnings = {
-    total: '₹42,500',
-    pending: '₹10,000',
-    thisMonth: '₹15,500',
-    lastMonth: '₹27,000'
-  };
+  // Convert blockchain products to display format
+  const recentProduceListings = products.map(product => ({
+    id: product.id,
+    crop: product.name,
+    quantity: '1 unit', // Could be enhanced with actual quantity data
+    date: new Date(product.createdAt * 1000).toLocaleDateString(),
+    status: getProductStatus(product.status),
+    price: `₹${convertETHToINR(product.price).toLocaleString()}`,
+    verified: true,
+    blockchainId: product.id
+  }));
 
-  const recentProduceListings = [
-    { id: 1, crop: 'Wheat', quantity: '500 kg', date: '2023-10-15', status: 'Listed', price: '₹20/kg' },
-    { id: 2, crop: 'Rice', quantity: '300 kg', date: '2023-10-10', status: 'Sold', price: '₹35/kg' },
-    { id: 3, crop: 'Tomatoes', quantity: '100 kg', date: '2023-10-05', status: 'In Transit', price: '₹15/kg' },
-    { crop: 'Vegetables', recommendation: 'Consider greenhouse cultivation', confidence: 'High' },
-  ];
-
-  const generateQRCode = (produceId: number) => {
-    // In a real app, this would generate a QR code with blockchain verification data
-    // For demo purposes, we're just setting a placeholder
-    setCurrentQRCode(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=produce_${produceId}_verification`);
-    setIsQRDialogOpen(true);
+  const generateQRCode = async (produceId: number, type: 'product' | 'batch' = 'product') => {
+    try {
+      const qrData = type === 'product' 
+        ? generateProductQRCode(produceId)
+        : generateBatchQRCode(produceId);
+      
+      setCurrentQRData(qrData);
+      setQrType(type);
+      const qrCodeUrl = await generateQRCodeDataURL(qrData);
+      setCurrentQRCode(qrCodeUrl);
+      setIsQRDialogOpen(true);
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate QR code',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleProduceSubmit = async (e: React.FormEvent) => {
@@ -274,10 +472,37 @@ const FarmerDashboard = () => {
           <div>
             <h1 className="text-3xl font-bold text-green-800">Farmer Dashboard</h1>
             <p className="text-gray-600">Welcome back, {profile?.first_name} {profile?.last_name}</p>
+            {walletConnected && walletAddress && (
+              <p className="text-sm text-green-600 mt-1">
+                MetaMask Connected: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+              </p>
+            )}
           </div>
-          <Button className="mt-4 md:mt-0 bg-green-600 hover:bg-green-700">
-            <Leaf className="mr-2 h-4 w-4" /> View Crop Calendar
-          </Button>
+          <div className="flex flex-col md:flex-row gap-4 mt-4 md:mt-0">
+            {!walletConnected ? (
+              <Button 
+                onClick={handleConnectWallet}
+                disabled={isLoading}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Connect MetaMask
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button className="bg-green-600 hover:bg-green-700">
+                <Leaf className="mr-2 h-4 w-4" /> View Crop Calendar
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -288,7 +513,7 @@ const FarmerDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{earnings.total}</div>
-              <p className="text-xs text-muted-foreground">+18% from last month</p>
+              <p className="text-xs text-muted-foreground">Total value of all products</p>
             </CardContent>
           </Card>
           <Card>
@@ -297,8 +522,8 @@ const FarmerDashboard = () => {
               <Tractor className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
-              <p className="text-xs text-muted-foreground">3 pending verification</p>
+              <div className="text-2xl font-bold">{earnings.activeListings}</div>
+              <p className="text-xs text-muted-foreground">{earnings.pending} pending</p>
             </CardContent>
           </Card>
           <Card>
@@ -307,8 +532,8 @@ const FarmerDashboard = () => {
               <TrendingUp className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">High</div>
-              <p className="text-xs text-muted-foreground">Wheat, Rice, Pulses</p>
+              <div className="text-2xl font-bold">{batches.length}</div>
+              <p className="text-xs text-muted-foreground">Active batches</p>
             </CardContent>
           </Card>
           <Card>
@@ -317,15 +542,16 @@ const FarmerDashboard = () => {
               <BarChart3 className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹55,000</div>
-              <p className="text-xs text-muted-foreground">Expected next month</p>
+              <div className="text-2xl font-bold">{earnings.sold}</div>
+              <p className="text-xs text-muted-foreground">Products sold</p>
             </CardContent>
           </Card>
         </div>
 
         <Tabs defaultValue="listings" className="mb-8">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsList className="grid w-full grid-cols-5 mb-4">
             <TabsTrigger value="listings">My Produce</TabsTrigger>
+            <TabsTrigger value="batches">My Batches</TabsTrigger>
             <TabsTrigger value="add">Add New Produce</TabsTrigger>
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
             <TabsTrigger value="advisory">Crop Advisory</TabsTrigger>
@@ -388,6 +614,78 @@ const FarmerDashboard = () => {
             </Card>
           </TabsContent>
           
+          <TabsContent value="batches" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>My Batches</CardTitle>
+                <CardDescription>Manage your product batches and generate QR codes</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    {batches.length} batches created
+                  </p>
+                  <Button 
+                    onClick={() => setIsBatchDialogOpen(true)}
+                    disabled={products.length === 0}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create New Batch
+                  </Button>
+                </div>
+                
+                {batches.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Tractor className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No batches yet</h3>
+                    <p className="text-gray-500 mb-4">Create your first batch to start selling products</p>
+                    <Button 
+                      onClick={() => setIsBatchDialogOpen(true)}
+                      disabled={products.length === 0}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create First Batch
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {batches.map((batch) => (
+                      <div key={batch.id} className="border rounded-lg p-4 hover:bg-muted/50">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-medium">Batch #{batch.id}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {batch.productIds.length} products • Created {new Date(batch.createdAt * 1000).toLocaleDateString()}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Location: {batch.location}
+                            </p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => generateQRCode(batch.id, 'batch')}
+                            >
+                              <QrCode className="h-3 w-3 mr-1" /> QR Code
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <p className="text-xs text-muted-foreground">
+                            Products: {batch.productIds.join(', ')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
           <TabsContent value="add">
             <Card>
               <CardHeader>
@@ -395,102 +693,81 @@ const FarmerDashboard = () => {
                 <CardDescription>List your new harvest for distributors</CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleProduceSubmit} className="space-y-4">
+                <form onSubmit={(e) => { e.preventDefault(); handleCreateProduct(); }} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="crop-type">Crop Type</Label>
-                      <Select>
-                        <SelectTrigger id="crop-type">
-                          <SelectValue placeholder="Select crop type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="wheat">Wheat</SelectItem>
-                          <SelectItem value="rice">Rice</SelectItem>
-                          <SelectItem value="corn">Corn</SelectItem>
-                          <SelectItem value="tomatoes">Tomatoes</SelectItem>
-                          <SelectItem value="potatoes">Potatoes</SelectItem>
-                          <SelectItem value="onions">Onions</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="product-name">Product Name *</Label>
+                      <Input 
+                        id="product-name"
+                        value={newProduct.name}
+                        onChange={(e) => setNewProduct(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g., Organic Wheat"
+                        required
+                      />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="quantity">Quantity</Label>
-                      <div className="flex space-x-2">
-                        <Input id="quantity" type="number" placeholder="Amount" />
-                        <Select defaultValue="kg">
-                          <SelectTrigger className="w-24">
-                            <SelectValue placeholder="Unit" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="kg">kg</SelectItem>
-                            <SelectItem value="ton">ton</SelectItem>
-                            <SelectItem value="quintal">quintal</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Label htmlFor="product-description">Description *</Label>
+                      <Textarea 
+                        id="product-description"
+                        value={newProduct.description}
+                        onChange={(e) => setNewProduct(prev => ({ ...prev, description: e.target.value }))}
+                        placeholder="Describe your product..."
+                        required
+                      />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="harvest-date">Harvest Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !date && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {date ? format(date, "PPP") : <span>Pick a date</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={date}
-                            onSelect={setDate}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="quality">Quality Grade</Label>
-                      <Select>
-                        <SelectTrigger id="quality">
-                          <SelectValue placeholder="Select quality grade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="premium">Premium</SelectItem>
-                          <SelectItem value="standard">Standard</SelectItem>
-                          <SelectItem value="economy">Economy</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="price">Expected Price (per unit)</Label>
+                      <Label htmlFor="product-price">Price (INR) *</Label>
                       <div className="flex">
                         <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground">
                           ₹
                         </span>
-                        <Input id="price" type="number" className="rounded-l-none" placeholder="0.00" />
+                        <Input 
+                          id="product-price"
+                          type="number"
+                          step="1"
+                          value={newProduct.price}
+                          onChange={(e) => setNewProduct(prev => ({ ...prev, price: e.target.value }))}
+                          placeholder="1000"
+                          className="rounded-l-none"
+                          required
+                        />
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        Price will be converted to ETH automatically for blockchain storage
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="image-hash">Image Hash (IPFS)</Label>
+                      <Input 
+                        id="image-hash"
+                        value={newProduct.imageHash}
+                        onChange={(e) => setNewProduct(prev => ({ ...prev, imageHash: e.target.value }))}
+                        placeholder="QmHash... (optional)"
+                      />
                     </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Additional Notes</Label>
-                    <Textarea id="notes" placeholder="Any special information about this produce..." />
-                  </div>
-                  
                   <div className="pt-4">
-                    <Button type="submit" className="bg-green-600 hover:bg-green-700 w-full md:w-auto">
-                      List Produce with Blockchain Verification
+                    <Button 
+                      type="submit" 
+                      className="bg-green-600 hover:bg-green-700 w-full md:w-auto"
+                      disabled={isCreatingProduct || !walletConnected}
+                    >
+                      {isCreatingProduct ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating Product...
+                        </>
+                      ) : (
+                        'Create Product on Blockchain'
+                      )}
                     </Button>
+                    {!walletConnected && (
+                      <p className="text-sm text-red-600 mt-2">Please connect your wallet first</p>
+                    )}
                   </div>
                 </form>
               </CardContent>
@@ -657,21 +934,89 @@ const FarmerDashboard = () => {
         </Tabs>
       </div>
       
-      <Dialog open={isQRDialogOpen} onOpenChange={setIsQRDialogOpen}>
+      <QRCodeGenerator
+        data={currentQRData}
+        title={`${qrType === 'product' ? 'Product' : 'Batch'} QR Code`}
+        description={`This QR code contains blockchain-verified information about your ${qrType}. Distributors and consumers can scan this to verify authenticity.`}
+        showDialog={isQRDialogOpen}
+        onClose={() => setIsQRDialogOpen(false)}
+      />
+
+      {/* Batch Creation Dialog */}
+      <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Produce QR Code</DialogTitle>
+            <DialogTitle>Create New Batch</DialogTitle>
             <DialogDescription>
-              This QR code contains blockchain-verified information about your produce.
-              Distributors and consumers can scan this to verify authenticity.
+              Select products to create a batch for distribution
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-center py-4">
-            <img src={currentQRCode} alt="QR Code" className="w-48 h-48" />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="batch-location">Batch Location *</Label>
+              <Input 
+                id="batch-location"
+                value={newBatch.location}
+                onChange={(e) => setNewBatch(prev => ({ ...prev, location: e.target.value }))}
+                placeholder="e.g., Farm Warehouse A"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Select Products</Label>
+              {products.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No products available. Create a product first.</p>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {products.map((product) => (
+                    <div key={product.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`product-${product.id}`}
+                        checked={selectedProducts.includes(product.id)}
+                        onChange={() => toggleProductSelection(product.id)}
+                        className="rounded"
+                      />
+                      <label htmlFor={`product-${product.id}`} className="text-sm">
+                        {product.name} - ₹{convertETHToINR(product.price).toLocaleString()}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {selectedProducts.length > 0 && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium">Selected Products:</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedProducts.length} products selected
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button onClick={() => setIsQRDialogOpen(false)}>Close</Button>
-            <Button variant="outline">Download</Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsBatchDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateBatch}
+              disabled={isCreatingBatch || selectedProducts.length === 0 || !newBatch.location}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isCreatingBatch ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating Batch...
+                </>
+              ) : (
+                'Create Batch'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

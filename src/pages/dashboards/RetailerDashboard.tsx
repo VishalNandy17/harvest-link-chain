@@ -14,6 +14,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Package, TrendingUp, QrCode, BarChart3, DollarSign, ShieldCheck, Search, ShoppingCart, Truck, History } from 'lucide-react';
+import { 
+  purchaseBatch, 
+  verifyProduct, 
+  generateProductQRCode,
+  generateQRCodeDataURL,
+  parseQRCodeData,
+  type Product
+} from '@/lib/blockchain';
+import { QRCodeGenerator } from '@/components/QRCodeGenerator';
 import { supabase } from '@/integrations/supabase/client';
 
 const RetailerDashboard = () => {
@@ -31,7 +40,15 @@ const RetailerDashboard = () => {
   
   const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<any>(null);
+  const [currentQRData, setCurrentQRData] = useState('');
+  const [verificationResult, setVerificationResult] = useState<{
+    valid: boolean;
+    message: string;
+    product?: Product;
+    owners?: string[];
+  } | null>(null);
   
   // Mock data for demonstration
   const inventoryItems = [
@@ -75,15 +92,62 @@ const RetailerDashboard = () => {
     { id: 102, distributor: 'Fresh Distributors', amount: '₹6,000', dueDate: '2023-11-10', items: 'Basmati Rice (150 kg)' },
   ];
 
-  const verifyProduct = (product: any) => {
+  const verifyProductById = async (productId: number) => {
+    try {
+      const result = await verifyProduct(productId);
+      setVerificationResult({
+        valid: true,
+        message: 'Product verified successfully',
+        product: result.product,
+        owners: result.owners
+      });
+      setIsVerifyDialogOpen(true);
+    } catch (error) {
+      console.error('Error verifying product:', error);
+      setVerificationResult({
+        valid: false,
+        message: 'Failed to verify product. It may not exist on the blockchain.'
+      });
+      setIsVerifyDialogOpen(true);
+    }
+  };
+
+  const verifyProductByItem = (product: any) => {
     setCurrentProduct(product);
     setIsVerifyDialogOpen(true);
     // In a real app, this would verify the blockchain record
   };
 
-  const initiatePayment = (paymentId: number) => {
-    // In a real app, this would open a payment dialog with smart contract details
-    setIsPaymentDialogOpen(true);
+  const initiatePayment = async (paymentId: number) => {
+    try {
+      // In a real app, this would call the purchaseBatch function
+      // For now, we'll simulate the payment
+      await purchaseBatch(paymentId, '1000000000000000000'); // 1 ETH in wei
+      setIsPaymentDialogOpen(true);
+    } catch (error) {
+      console.error('Error initiating payment:', error);
+    }
+  };
+
+  const generateProductQR = async (productId: number) => {
+    try {
+      const qrData = generateProductQRCode(productId);
+      setCurrentQRData(qrData);
+      setIsQRDialogOpen(true);
+    } catch (error) {
+      console.error('Error generating product QR code:', error);
+    }
+  };
+
+  const handleQRScan = (data: string) => {
+    try {
+      const parsed = parseQRCodeData(data);
+      if (parsed.type === 'product' && parsed.id) {
+        verifyProductById(parsed.id);
+      }
+    } catch (error) {
+      console.error('Error processing QR code:', error);
+    }
   };
 
   const updateInventory = (productId: number, action: 'add' | 'remove', quantity: number) => {
@@ -203,10 +267,18 @@ const RetailerDashboard = () => {
                               <Button 
                                 variant="outline" 
                                 size="sm" 
-                                onClick={() => verifyProduct(item)}
+                                onClick={() => verifyProductByItem(item)}
                                 className="mr-2"
                               >
                                 <ShieldCheck className="h-3 w-3 mr-1" /> Verify
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => generateProductQR(item.id)}
+                                className="mr-2"
+                              >
+                                <QrCode className="h-3 w-3 mr-1" /> QR Code
                               </Button>
                               <Button 
                                 variant="outline" 
@@ -267,7 +339,7 @@ const RetailerDashboard = () => {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            onClick={() => verifyProduct(item)}
+                            onClick={() => verifyProductByItem(item)}
                             className="flex-1"
                           >
                             <ShieldCheck className="h-3 w-3 mr-1" /> Verify
@@ -842,6 +914,14 @@ const RetailerDashboard = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        <QRCodeGenerator
+          data={currentQRData}
+          title="Product QR Code"
+          description="This QR code contains blockchain-verified information about the product. Consumers can scan this to verify authenticity and view the complete supply chain journey."
+          showDialog={isQRDialogOpen}
+          onClose={() => setIsQRDialogOpen(false)}
+        />
       </div>
     </ResponsiveContainer>
   );

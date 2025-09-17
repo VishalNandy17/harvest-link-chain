@@ -12,7 +12,16 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Package, TrendingUp, QrCode, Truck, BarChart3, DollarSign, ShieldCheck, Search, Loader2 } from 'lucide-react';
-import { blockchainService, type Batch } from '@/lib/blockchain';
+import { 
+  blockchainService, 
+  type Batch, 
+  type Product,
+  verifyProduct,
+  updateBatchLocation,
+  generateBatchQRCode,
+  generateQRCodeDataURL,
+  parseQRCodeData
+} from '@/lib/blockchain';
 import { QRCodeGenerator } from '@/components/QRCodeGenerator';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,6 +64,8 @@ const DistributorDashboard = () => {
     product?: Product;
     owners?: string[];
   } | null>(null);
+  const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
+  const [currentQRData, setCurrentQRData] = useState('');
   
   // Ensure this dashboard is only accessible to distributors
   useEffect(() => {
@@ -140,10 +151,10 @@ const DistributorDashboard = () => {
   };
 
   // Verify product
-  const verifyProduct = async (productId: number) => {
+  const verifyProductById = async (productId: number) => {
     try {
       setIsLoading(true);
-      const result = await blockchainService.verifyProduct(productId);
+      const result = await verifyProduct(productId);
       
       setVerificationResult({
         valid: true,
@@ -166,10 +177,10 @@ const DistributorDashboard = () => {
   };
 
   // Update batch location
-  const updateBatchLocation = async (batchId: number, newLocation: string) => {
+  const updateBatchLocationById = async (batchId: number, newLocation: string) => {
     try {
       setIsLoading(true);
-      await blockchainService.updateBatchLocation(batchId, newLocation);
+      await updateBatchLocation(batchId, newLocation);
       
       // Update local state
       setBatches(batches.map(batch => 
@@ -195,12 +206,24 @@ const DistributorDashboard = () => {
   // Handle QR code scan
   const handleQRScan = (data: string) => {
     try {
-      const productId = parseInt(data.split('_')[1]);
-      if (!isNaN(productId)) {
-        verifyProduct(productId);
+      const parsed = parseQRCodeData(data);
+      if (parsed.type === 'product' && parsed.id) {
+        verifyProductById(parsed.id);
+      } else if (parsed.type === 'batch' && parsed.id) {
+        // Handle batch verification
+        const batch = batches.find(b => b.id === parsed.id);
+        if (batch) {
+          setCurrentQRData(data);
+          setIsQRDialogOpen(true);
+        }
       }
     } catch (error) {
       console.error('Error processing QR code:', error);
+      toast({
+        title: 'Error',
+        description: 'Invalid QR code format',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -222,6 +245,21 @@ const DistributorDashboard = () => {
   const scanQRCode = () => {
     setIsQRScannerOpen(true);
     // In a real app, this would activate the camera for QR scanning
+  };
+
+  const generateBatchQR = async (batchId: number) => {
+    try {
+      const qrData = generateBatchQRCode(batchId);
+      setCurrentQRData(qrData);
+      setIsQRDialogOpen(true);
+    } catch (error) {
+      console.error('Error generating batch QR code:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate QR code',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -402,21 +440,41 @@ const DistributorDashboard = () => {
                           <td className="py-3 px-2">{item.destination}</td>
                           <td className="py-3 px-2">
                             {item.status === 'In Storage' && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => assignTransport(item.id)}
-                              >
-                                <Truck className="h-3 w-3 mr-1" /> Assign Transport
-                              </Button>
+                              <>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => assignTransport(item.id)}
+                                  className="mr-2"
+                                >
+                                  <Truck className="h-3 w-3 mr-1" /> Assign Transport
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => generateBatchQR(item.id)}
+                                >
+                                  <QrCode className="h-3 w-3 mr-1" /> QR Code
+                                </Button>
+                              </>
                             )}
                             {item.status === 'In Transit' && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                              >
-                                Track Shipment
-                              </Button>
+                              <>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="mr-2"
+                                >
+                                  Track Shipment
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => generateBatchQR(item.id)}
+                                >
+                                  <QrCode className="h-3 w-3 mr-1" /> QR Code
+                                </Button>
+                              </>
                             )}
                           </td>
                         </tr>
@@ -722,11 +780,19 @@ const DistributorDashboard = () => {
             <Button onClick={() => {
               setIsQRScannerOpen(false);
               // Simulate a successful scan
-              verifyProduce(availableProduce[2]);
+              handleQRScan(generateBatchQRCode(1));
             }}>Scan Manually</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <QRCodeGenerator
+        data={currentQRData}
+        title="Batch QR Code"
+        description="This QR code contains blockchain-verified information about the batch. Retailers and consumers can scan this to verify authenticity."
+        showDialog={isQRDialogOpen}
+        onClose={() => setIsQRDialogOpen(false)}
+      />
     </div>
   );
 };
