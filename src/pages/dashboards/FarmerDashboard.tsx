@@ -35,6 +35,7 @@ import {
   Batch
 } from '@/lib/blockchain';
 import { QRCodeGenerator } from '@/components/QRCodeGenerator';
+import { supabase } from '@/integrations/supabase/client';
 
 const FarmerDashboard = () => {
   const { user, profile, userRole, loading } = useAuth();
@@ -57,6 +58,22 @@ const FarmerDashboard = () => {
   const [newBatch, setNewBatch] = useState({
     productIds: [] as number[],
     location: '',
+  });
+  const [batchDetails, setBatchDetails] = useState({
+    farmerId: '',
+    farmerName: profile ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() : '',
+    phone: '',
+    locationVillage: '',
+    locationDistrict: '',
+    locationState: '',
+    landSurveyNumber: '',
+    cropType: '',
+    cropVariety: '',
+    cropGrade: '',
+    cultivationDate: '',
+    harvestDate: '',
+    quantityProduced: '',
+    certificationInfo: '',
   });
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const [harvestDate, setHarvestDate] = useState<Date | undefined>(new Date());
@@ -362,10 +379,54 @@ const FarmerDashboard = () => {
         description: `Batch #${batchId} created successfully with ${newBatch.productIds.length} products`,
       });
       
+      // Persist batch metadata to Supabase for off-chain details and QR mapping
+      try {
+        const qrUrl = generateBatchQRCode(batchId);
+        await supabase.from('batches').insert({
+          batch_id: batchId,
+          farmer_wallet: walletAddress,
+          farmer_id: batchDetails.farmerId,
+          farmer_name: batchDetails.farmerName,
+          phone: batchDetails.phone,
+          village: batchDetails.locationVillage,
+          district: batchDetails.locationDistrict,
+          state: batchDetails.locationState,
+          land_survey: batchDetails.landSurveyNumber,
+          crop_type: batchDetails.cropType,
+          crop_variety: batchDetails.cropVariety,
+          crop_grade: batchDetails.cropGrade,
+          cultivation_date: batchDetails.cultivationDate || null,
+          harvest_date: batchDetails.harvestDate || null,
+          quantity_produced: batchDetails.quantityProduced,
+          certification_info: batchDetails.certificationInfo,
+          product_ids: newBatch.productIds,
+          location: newBatch.location,
+          qr_url: qrUrl
+        });
+      } catch (err) {
+        console.error('Error saving batch details:', err);
+      }
+
       // Reset form and close dialog
       setNewBatch({
         productIds: [],
         location: '',
+      });
+      setBatchDetails({
+        farmerId: '',
+        farmerName: profile ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() : '',
+        phone: '',
+        locationVillage: '',
+        locationDistrict: '',
+        locationState: '',
+        landSurveyNumber: '',
+        cropType: '',
+        cropVariety: '',
+        cropGrade: '',
+        cultivationDate: '',
+        harvestDate: '',
+        quantityProduced: '',
+        certificationInfo: '',
       });
       setSelectedProducts([]);
       setIsBatchDialogOpen(false);
@@ -984,7 +1045,7 @@ const FarmerDashboard = () => {
               Select products to create a batch for distribution
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="batch-location">Batch Location *</Label>
               <Input 
@@ -994,6 +1055,76 @@ const FarmerDashboard = () => {
                 placeholder="e.g., Farm Warehouse A"
                 required
               />
+            </div>
+
+            {/* Extended farmer and crop details for the batch */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="farmer-id">Farmer ID (Aadhaar / Govt ID) *</Label>
+                <Input id="farmer-id" value={batchDetails.farmerId} onChange={(e) => setBatchDetails(prev => ({ ...prev, farmerId: e.target.value }))} placeholder="e.g., 1234-5678-9012" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="farmer-name">Farmer Name *</Label>
+                <Input id="farmer-name" value={batchDetails.farmerName} onChange={(e) => setBatchDetails(prev => ({ ...prev, farmerName: e.target.value }))} placeholder="e.g., Ramesh Kumar" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Contact (Phone) *</Label>
+                <Input id="phone" value={batchDetails.phone} onChange={(e) => setBatchDetails(prev => ({ ...prev, phone: e.target.value }))} placeholder="e.g., +91 9876543210" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="survey">Land Details (Survey / Farm ID)</Label>
+                <Input id="survey" value={batchDetails.landSurveyNumber} onChange={(e) => setBatchDetails(prev => ({ ...prev, landSurveyNumber: e.target.value }))} placeholder="e.g., SVY-45-22A" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="village">Village</Label>
+                <Input id="village" value={batchDetails.locationVillage} onChange={(e) => setBatchDetails(prev => ({ ...prev, locationVillage: e.target.value }))} placeholder="e.g., Rampur" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="district">District</Label>
+                <Input id="district" value={batchDetails.locationDistrict} onChange={(e) => setBatchDetails(prev => ({ ...prev, locationDistrict: e.target.value }))} placeholder="e.g., Bhopal" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">State</Label>
+                <Input id="state" value={batchDetails.locationState} onChange={(e) => setBatchDetails(prev => ({ ...prev, locationState: e.target.value }))} placeholder="e.g., Madhya Pradesh" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="crop-type">Crop Type *</Label>
+                <Input id="crop-type" value={batchDetails.cropType} onChange={(e) => setBatchDetails(prev => ({ ...prev, cropType: e.target.value }))} placeholder="e.g., Wheat, Rice, Vegetables" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="crop-variety">Variety</Label>
+                <Input id="crop-variety" value={batchDetails.cropVariety} onChange={(e) => setBatchDetails(prev => ({ ...prev, cropVariety: e.target.value }))} placeholder="e.g., Sharbati" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="crop-grade">Grade</Label>
+                <Input id="crop-grade" value={batchDetails.cropGrade} onChange={(e) => setBatchDetails(prev => ({ ...prev, cropGrade: e.target.value }))} placeholder="e.g., A / Premium" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cultivation">Cultivation Date</Label>
+                <Input type="date" id="cultivation" value={batchDetails.cultivationDate} onChange={(e) => setBatchDetails(prev => ({ ...prev, cultivationDate: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="harvest">Harvest Date</Label>
+                <Input type="date" id="harvest" value={batchDetails.harvestDate} onChange={(e) => setBatchDetails(prev => ({ ...prev, harvestDate: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Quantity Produced</Label>
+                <Input id="quantity" value={batchDetails.quantityProduced} onChange={(e) => setBatchDetails(prev => ({ ...prev, quantityProduced: e.target.value }))} placeholder="e.g., 500 kg" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="certification">Certification Info</Label>
+              <Input id="certification" value={batchDetails.certificationInfo} onChange={(e) => setBatchDetails(prev => ({ ...prev, certificationInfo: e.target.value }))} placeholder="e.g., Organic, FSSAI" />
             </div>
             
             <div className="space-y-2">
