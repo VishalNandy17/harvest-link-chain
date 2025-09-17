@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Leaf, ShieldCheck, Truck, QrCode, Menu, X, ChevronDown, User, LogOut } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { UserRole } from "@/lib/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +15,34 @@ import {
 
 export const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, userRole, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } finally {
+      setIsMobileMenuOpen(false);
+      navigate("/login", { replace: true });
+    }
+  };
+
+  const dashboardPath = (() => {
+    switch (userRole) {
+      case UserRole.FARMER:
+        return "/dashboards/farmer";
+      case UserRole.DISTRIBUTOR:
+        return "/dashboards/distributor";
+      case UserRole.RETAILER:
+        return "/dashboards/retailer";
+      case UserRole.CONSUMER:
+        return "/dashboards/consumer";
+      case UserRole.ADMIN:
+        return "/dashboards/admin";
+      default:
+        return "/dashboard";
+    }
+  })();
 
   return (
     <nav className="bg-white/80 backdrop-blur-lg border-b border-border/50 sticky top-0 z-50 transition-all duration-300">
@@ -39,9 +67,9 @@ export const Navigation = () => {
           {/* Enhanced Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-2">
             <div className="flex items-center space-x-1 bg-muted/50 rounded-full p-1">
-              <a href="#dashboard" className="px-4 py-2 rounded-full text-sm font-medium text-foreground hover:bg-white hover:text-farm-primary transition-all duration-200 hover:shadow-sm">
+              <Link to={dashboardPath} className="px-4 py-2 rounded-full text-sm font-medium text-foreground hover:bg-white hover:text-farm-primary transition-all duration-200 hover:shadow-sm">
                 Dashboard
-              </a>
+              </Link>
               <a href="#track" className="px-4 py-2 rounded-full text-sm font-medium text-foreground hover:bg-white hover:text-farm-primary transition-all duration-200 hover:shadow-sm">
                 Track Produce
               </a>
@@ -69,13 +97,13 @@ export const Navigation = () => {
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard">Dashboard</Link>
+                    <Link to={dashboardPath}>Dashboard</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/profile">Profile</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={signOut} className="text-red-600">
+                  <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign Out
                   </DropdownMenuItem>
@@ -110,9 +138,9 @@ export const Navigation = () => {
         {isMobileMenuOpen && (
           <div className="md:hidden py-6 border-t border-border/50 bg-white/95 backdrop-blur-sm">
             <div className="flex flex-col space-y-1">
-              <a href="#dashboard" className="px-4 py-3 rounded-xl text-foreground hover:bg-muted/50 hover:text-farm-primary transition-all duration-200 font-medium">
+              <Link to={dashboardPath} className="px-4 py-3 rounded-xl text-foreground hover:bg-muted/50 hover:text-farm-primary transition-all duration-200 font-medium">
                 Dashboard
-              </a>
+              </Link>
               <a href="#track" className="px-4 py-3 rounded-xl text-foreground hover:bg-muted/50 hover:text-farm-primary transition-all duration-200 font-medium">
                 Track Produce
               </a>
@@ -128,12 +156,12 @@ export const Navigation = () => {
                     <div className="mx-4 px-4 py-2 text-sm text-muted-foreground border-b border-border/50">
                       Signed in as {user.email}
                     </div>
-                    <Link to="/dashboard" className="mx-4">
+                    <Link to={dashboardPath} className="mx-4">
                       <Button variant="outline" size="sm" className="w-full">
                         Dashboard
                       </Button>
                     </Link>
-                    <button onClick={signOut} className="mx-4">
+                    <button onClick={handleSignOut} className="mx-4">
                       <Button variant="outline" size="sm" className="w-full text-red-600 hover:text-red-700">
                         Sign Out
                       </Button>

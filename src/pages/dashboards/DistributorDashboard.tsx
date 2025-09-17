@@ -11,41 +11,202 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { Package, TrendingUp, QrCode, Truck, BarChart3, DollarSign, ShieldCheck, Search } from 'lucide-react';
+import { Package, TrendingUp, QrCode, Truck, BarChart3, DollarSign, ShieldCheck, Search, Loader2 } from 'lucide-react';
+import { blockchainService, type Batch } from '@/lib/blockchain';
+import { QRCodeGenerator } from '@/components/QRCodeGenerator';
+import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
+interface ProduceItem {
+  id: number;
+  crop: string;
+  farmer: string;
+  quantity: string;
+  harvestDate: string;
+  quality: string;
+  price: string;
+  verified: boolean;
+}
 
 const DistributorDashboard = () => {
   const { user, profile, userRole, loading } = useAuth();
   const navigate = useNavigate();
   
-  // Ensure this dashboard is only accessible to distributors
-  useEffect(() => {
-    // Only redirect if we're not loading and the user role doesn't match
-    if (!loading && userRole !== UserRole.DISTRIBUTOR && userRole !== UserRole.ADMIN) {
-      // Redirect to appropriate dashboard based on role
-      navigate('/', { replace: true });
-    }
-  }, [userRole, loading, navigate]);
+  // State
   const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
-  const [currentProduce, setCurrentProduce] = useState<any>(null);
+  const [currentProduce, setCurrentProduce] = useState<ProduceItem | null>(null);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [availableProduce, setAvailableProduce] = useState<ProduceItem[]>([]);
+  const [procuredProduce, setProcuredProduce] = useState<Array<{
+    id: number;
+    crop: string;
+    farmer: string;
+    quantity: string;
+    purchaseDate: string;
+    status: 'In Storage' | 'In Transit';
+    destination: string;
+  }>>([]);
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [verificationResult, setVerificationResult] = useState<{
+    valid: boolean;
+    message: string;
+    product?: Product;
+    owners?: string[];
+  } | null>(null);
   
-  // Mock data for demonstration
-  const availableProduce = [
-    { id: 1, crop: 'Wheat', farmer: 'Ramesh Kumar', quantity: '500 kg', harvestDate: '2023-10-15', quality: 'Premium', price: '₹20/kg', verified: true },
-    { id: 2, crop: 'Rice', farmer: 'Suresh Patel', quantity: '300 kg', harvestDate: '2023-10-10', quality: 'Standard', price: '₹35/kg', verified: true },
-    { id: 3, crop: 'Tomatoes', farmer: 'Mahesh Singh', quantity: '100 kg', harvestDate: '2023-10-05', quality: 'Premium', price: '₹15/kg', verified: false },
-  ];
+  // Ensure this dashboard is only accessible to distributors
+  useEffect(() => {
+    if (!loading && userRole !== UserRole.DISTRIBUTOR && userRole !== UserRole.ADMIN) {
+      navigate('/', { replace: true });
+    } else if (!loading) {
+      checkWalletConnection();
+      loadBatches();
+      // Mock data for now
+      setAvailableProduce([
+        { id: 1, crop: 'Wheat', farmer: 'Ramesh Kumar', quantity: '500 kg', harvestDate: '2023-10-15', quality: 'Premium', price: '₹20/kg', verified: true },
+        { id: 2, crop: 'Rice', farmer: 'Suresh Patel', quantity: '300 kg', harvestDate: '2023-10-10', quality: 'Standard', price: '₹35/kg', verified: true },
+        { id: 3, crop: 'Tomatoes', farmer: 'Mahesh Singh', quantity: '100 kg', harvestDate: '2023-10-05', quality: 'Premium', price: '₹15/kg', verified: false },
+      ]);
+      setProcuredProduce([
+        { id: 101, crop: 'Wheat', farmer: 'Dinesh Sharma', quantity: '800 kg', purchaseDate: '2023-09-25', status: 'In Storage', destination: 'Central Warehouse' },
+        { id: 102, crop: 'Potatoes', farmer: 'Rajesh Verma', quantity: '500 kg', purchaseDate: '2023-09-20', status: 'In Transit', destination: 'City Market' },
+      ]);
+    }
+  }, [userRole, loading, navigate]);
 
-  const procuredProduce = [
-    { id: 101, crop: 'Wheat', farmer: 'Dinesh Sharma', quantity: '800 kg', purchaseDate: '2023-09-25', status: 'In Storage', destination: 'Central Warehouse' },
-    { id: 102, crop: 'Potatoes', farmer: 'Rajesh Verma', quantity: '500 kg', purchaseDate: '2023-09-20', status: 'In Transit', destination: 'City Market' },
-  ];
+  // Check wallet connection
+  const checkWalletConnection = async () => {
+    try {
+      const account = await blockchainService.getCurrentAccount();
+      setWalletConnected(!!account);
+    } catch (error) {
+      console.error('Error checking wallet connection:', error);
+      setWalletConnected(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const verifyProduce = (produce: any) => {
+  // Connect wallet
+  const connectWallet = async () => {
+    try {
+      await blockchainService.connectWallet();
+      setWalletConnected(true);
+      toast({
+        title: 'Wallet Connected',
+        description: 'Your wallet has been connected successfully',
+      });
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to connect wallet',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Load batches
+  const loadBatches = async () => {
+    try {
+      // In a real app, you would fetch batches from the blockchain
+      // For now, we'll use mock data
+      setBatches([
+        {
+          id: 1,
+          productIds: [1, 2, 3],
+          currentHandler: '0x123...',
+          createdAt: Date.now() / 1000 - 86400, // 1 day ago
+          location: 'Central Warehouse'
+        },
+        {
+          id: 2,
+          productIds: [4, 5],
+          currentHandler: '0x123...',
+          createdAt: Date.now() / 1000 - 172800, // 2 days ago
+          location: 'In Transit to Retailer'
+        }
+      ]);
+    } catch (error) {
+      console.error('Error loading batches:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load batches',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Verify product
+  const verifyProduct = async (productId: number) => {
+    try {
+      setIsLoading(true);
+      const result = await blockchainService.verifyProduct(productId);
+      
+      setVerificationResult({
+        valid: true,
+        message: 'Product verified successfully',
+        product: result.product,
+        owners: result.owners
+      });
+      
+      setIsVerifyDialogOpen(true);
+    } catch (error) {
+      console.error('Error verifying product:', error);
+      setVerificationResult({
+        valid: false,
+        message: 'Failed to verify product. It may not exist on the blockchain.'
+      });
+      setIsVerifyDialogOpen(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update batch location
+  const updateBatchLocation = async (batchId: number, newLocation: string) => {
+    try {
+      setIsLoading(true);
+      await blockchainService.updateBatchLocation(batchId, newLocation);
+      
+      // Update local state
+      setBatches(batches.map(batch => 
+        batch.id === batchId ? { ...batch, location: newLocation } : batch
+      ));
+      
+      toast({
+        title: 'Success',
+        description: 'Batch location updated successfully',
+      });
+    } catch (error) {
+      console.error('Error updating batch location:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update batch location',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle QR code scan
+  const handleQRScan = (data: string) => {
+    try {
+      const productId = parseInt(data.split('_')[1]);
+      if (!isNaN(productId)) {
+        verifyProduct(productId);
+      }
+    } catch (error) {
+      console.error('Error processing QR code:', error);
+    }
+  };
+
+  const verifyProduce = (produce: ProduceItem) => {
     setCurrentProduce(produce);
     setIsVerifyDialogOpen(true);
-    // In a real app, this would verify the blockchain record
   };
 
   const handleProcurement = (produceId: number, action: 'accept' | 'reject') => {

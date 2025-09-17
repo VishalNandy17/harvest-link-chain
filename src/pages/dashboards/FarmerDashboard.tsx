@@ -15,30 +15,228 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, Tractor, TrendingUp, QrCode, Leaf, BarChart3, DollarSign, Clock, AlertCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { CalendarIcon, Tractor, TrendingUp, QrCode, Leaf, BarChart3, DollarSign, Clock, AlertCircle, Plus, Loader2 } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
+import { 
+  createProduct, 
+  createBatch, 
+  getProduct, 
+  getBatch, 
+  getProductStatus, 
+  connectWallet, 
+  getCurrentAccount,
+  Product,
+  Batch
+} from '@/lib/blockchain';
 
 const FarmerDashboard = () => {
   const { user, profile, userRole, loading } = useAuth();
   const navigate = useNavigate();
-  
-  // Ensure this dashboard is only accessible to farmers
-  useEffect(() => {
-    // Only redirect if we're not loading and the user role doesn't match
-    if (!loading && userRole !== UserRole.FARMER && userRole !== UserRole.ADMIN) {
-      // Redirect to appropriate dashboard based on role
-      navigate('/', { replace: true });
-    }
-  }, [userRole, loading, navigate]);
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    description: '',
+    imageHash: '',
+    price: '',
+  });
+  const [newBatch, setNewBatch] = useState({
+    productIds: [] as number[],
+    location: '',
+  });
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [harvestDate, setHarvestDate] = useState<Date | undefined>(new Date());
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
   const [currentQRCode, setCurrentQRCode] = useState('');
   
-  // Mock data for demonstration
-  const recentProduceListings = [
-    { id: 1, crop: 'Wheat', quantity: '500 kg', date: '2023-10-15', status: 'Listed', price: '₹20/kg' },
-    { id: 2, crop: 'Rice', quantity: '300 kg', date: '2023-10-10', status: 'Sold', price: '₹35/kg' },
-    { id: 3, crop: 'Tomatoes', quantity: '100 kg', date: '2023-10-05', status: 'In Transit', price: '₹15/kg' },
+  // Ensure this dashboard is only accessible to farmers
+  useEffect(() => {
+    if (!loading && userRole !== UserRole.FARMER && userRole !== UserRole.ADMIN) {
+      navigate('/', { replace: true });
+    }
+  }, [userRole, loading, navigate]);
+
+  // Connect wallet and load data
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const account = await getCurrentAccount();
+        if (account) {
+          setWalletConnected(true);
+          await loadFarmData(account);
+        }
+      } catch (error) {
+        console.error('Error initializing wallet:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to connect to wallet',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    init();
+  }, []);
+
+  const loadFarmData = async (account: string) => {
+    try {
+      // In a real app, you would fetch products and batches associated with this farmer
+      // For now, we'll just set empty arrays
+      setProducts([]);
+      setBatches([]);
+    } catch (error) {
+      console.error('Error loading farm data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load farm data',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleConnectWallet = async () => {
+    try {
+      await connectWallet();
+      setWalletConnected(true);
+      toast({
+        title: 'Wallet Connected',
+        description: 'Your wallet has been connected successfully',
+      });
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to connect wallet',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCreateProduct = async () => {
+    if (!walletConnected) {
+      toast({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your wallet first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await createProduct(
+        newProduct.name,
+        newProduct.description,
+        newProduct.imageHash,
+        newProduct.price
+      );
+      
+      toast({
+        title: 'Success',
+        description: 'Product created successfully',
+      });
+      
+      // Reset form and close dialog
+      setNewProduct({
+        name: '',
+        description: '',
+        imageHash: '',
+        price: '',
+      });
+      setIsProductDialogOpen(false);
+      
+      // Refresh data
+      const account = await getCurrentAccount();
+      if (account) {
+        await loadFarmData(account);
+      }
+    } catch (error) {
+      console.error('Error creating product:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create product',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateBatch = async () => {
+    if (!walletConnected) {
+      toast({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your wallet first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (newBatch.productIds.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'Please select at least one product',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await createBatch(
+        newBatch.productIds,
+        newBatch.location
+      );
+      
+      toast({
+        title: 'Success',
+        description: 'Batch created successfully',
+      });
+      
+      // Reset form and close dialog
+      setNewBatch({
+        productIds: [],
+        location: '',
+      });
+      setSelectedProducts([]);
+      setIsBatchDialogOpen(false);
+      
+      // Refresh data
+      const account = await getCurrentAccount();
+      if (account) {
+        await loadFarmData(account);
+      }
+    } catch (error) {
+      console.error('Error creating batch:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create batch',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleProductSelection = (productId: number) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const cropAdvisory = [
+    { crop: 'Wheat', recommendation: 'Ideal planting time in 2 weeks', confidence: 'High' },
+    { crop: 'Pulses', recommendation: 'Market demand increasing', confidence: 'Medium' },
+    { crop: 'Vegetables', recommendation: 'Consider greenhouse cultivation', confidence: 'High' },
   ];
 
   const earnings = {
@@ -48,9 +246,10 @@ const FarmerDashboard = () => {
     lastMonth: '₹27,000'
   };
 
-  const cropAdvisory = [
-    { crop: 'Wheat', recommendation: 'Ideal planting time in 2 weeks', confidence: 'High' },
-    { crop: 'Pulses', recommendation: 'Market demand increasing', confidence: 'Medium' },
+  const recentProduceListings = [
+    { id: 1, crop: 'Wheat', quantity: '500 kg', date: '2023-10-15', status: 'Listed', price: '₹20/kg' },
+    { id: 2, crop: 'Rice', quantity: '300 kg', date: '2023-10-10', status: 'Sold', price: '₹35/kg' },
+    { id: 3, crop: 'Tomatoes', quantity: '100 kg', date: '2023-10-05', status: 'In Transit', price: '₹15/kg' },
     { crop: 'Vegetables', recommendation: 'Consider greenhouse cultivation', confidence: 'High' },
   ];
 

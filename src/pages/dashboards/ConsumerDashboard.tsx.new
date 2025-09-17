@@ -1,0 +1,872 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { UserRole } from '@/lib/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
+import { Slider } from '@/components/ui/slider';
+import { cn } from '@/lib/utils';
+import { QrCode, Search, ShieldCheck, Star, ThumbsUp, Leaf, Clock, Truck, History, Heart, Loader2, MapPin, Users, Calendar, Percent } from 'lucide-react';
+import { blockchainService, type Product } from '@/lib/blockchain';
+import { QRCodeGenerator } from '@/components/QRCodeGenerator';
+import { toast } from '@/components/ui/use-toast';
+
+interface ScannedProduct {
+  id: number;
+  product: string;
+  brand: string;
+  scannedDate: string;
+  farmer: string;
+  origin: string;
+  harvestDate: string;
+  farmerShare: string;
+  verified: boolean;
+  productId: number;
+  imageUrl?: string;
+  sustainabilityScore?: number;
+  carbonFootprint?: string;
+  waterUsage?: string;
+  certifications?: string[];
+}
+
+const ConsumerDashboard = () => {
+  const { user, profile, userRole, loading } = useAuth();
+  const navigate = useNavigate();
+  
+  // State
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
+  const [isProductDetailOpen, setIsProductDetailOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [currentProduct, setCurrentProduct] = useState<ScannedProduct | null>(null);
+  const [verificationResult, setVerificationResult] = useState<{
+    valid: boolean;
+    message: string;
+    product?: Product;
+    owners?: string[];
+  } | null>(null);
+  const [recentScans, setRecentScans] = useState<ScannedProduct[]>([]);
+  const [savedProducts, setSavedProducts] = useState<ScannedProduct[]>([]);
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [rating, setRating] = useState(5);
+  const [feedback, setFeedback] = useState('');
+  
+  // Mock data for demonstration
+  const mockRecentScans: ScannedProduct[] = [
+    { 
+      id: 1, 
+      product: 'Organic Wheat Flour', 
+      brand: 'Nature Harvest',
+      scannedDate: '2023-10-25', 
+      farmer: 'Ramesh Kumar', 
+      origin: 'Madhya Pradesh', 
+      harvestDate: '2023-09-15',
+      farmerShare: '80%',
+      verified: true,
+      productId: 101,
+      imageUrl: '/placeholder-wheat.jpg',
+      sustainabilityScore: 92,
+      carbonFootprint: '0.5 kg CO₂e/kg',
+      waterUsage: '1,200 L/kg',
+      certifications: ['USDA Organic', 'India Organic']
+    },
+    { 
+      id: 2, 
+      product: 'Basmati Rice', 
+      brand: 'Golden Grains',
+      scannedDate: '2023-10-24', 
+      farmer: 'Suresh Patel', 
+      origin: 'Punjab', 
+      harvestDate: '2023-10-01',
+      farmerShare: '75%',
+      verified: true,
+      productId: 102,
+      imageUrl: '/placeholder-rice.jpg',
+      sustainabilityScore: 88,
+      carbonFootprint: '1.2 kg CO₂e/kg',
+      waterUsage: '2,500 L/kg',
+      certifications: ['India Organic']
+    },
+  ];
+
+  const mockSavedProducts = [
+    { 
+      id: 3, 
+      product: 'Organic Honey', 
+      brand: 'Sweet Nectar',
+      scannedDate: '2023-10-20',
+      farmer: 'Beekeeper Farms',
+      origin: 'Uttarakhand',
+      harvestDate: '2023-09-01',
+      farmerShare: '85%',
+      verified: true,
+      productId: 203,
+      imageUrl: '/placeholder-honey.jpg'
+    }
+  ];
+
+  // Ensure this dashboard is only accessible to consumers
+  useEffect(() => {
+    if (!loading && userRole !== UserRole.CONSUMER && userRole !== UserRole.ADMIN) {
+      navigate('/', { replace: true });
+    } else if (!loading) {
+      checkWalletConnection();
+      loadRecentScans();
+      loadSavedProducts();
+    }
+  }, [userRole, loading, navigate]);
+
+  // Check wallet connection
+  const checkWalletConnection = async () => {
+    try {
+      const account = await blockchainService.getCurrentAccount();
+      setWalletConnected(!!account);
+    } catch (error) {
+      console.error('Error checking wallet connection:', error);
+      setWalletConnected(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Connect wallet
+  const connectWallet = async () => {
+    try {
+      await blockchainService.connectWallet();
+      setWalletConnected(true);
+      toast({
+        title: 'Wallet Connected',
+        description: 'Your wallet has been connected successfully',
+      });
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to connect wallet',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Load recent scans (in a real app, this would come from the blockchain/backend)
+  const loadRecentScans = async () => {
+    try {
+      setIsLoading(true);
+      // In a real app, fetch from the blockchain/backend
+      // For now, use mock data
+      setRecentScans(mockRecentScans);
+    } catch (error) {
+      console.error('Error loading recent scans:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load recent scans',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load saved products (in a real app, this would come from the blockchain/backend)
+  const loadSavedProducts = async () => {
+    try {
+      setIsLoading(true);
+      // In a real app, fetch from the blockchain/backend
+      // For now, use mock data
+      setSavedProducts(mockSavedProducts);
+    } catch (error) {
+      console.error('Error loading saved products:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load saved products',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Verify product
+  const verifyProduct = async (productId: number) => {
+    try {
+      setIsLoading(true);
+      const result = await blockchainService.verifyProduct(productId);
+      
+      setVerificationResult({
+        valid: true,
+        message: 'Product verified successfully',
+        product: result.product,
+        owners: result.owners
+      });
+      
+      setIsProductDetailOpen(true);
+    } catch (error) {
+      console.error('Error verifying product:', error);
+      setVerificationResult({
+        valid: false,
+        message: 'Failed to verify product. It may not exist on the blockchain.'
+      });
+      setIsProductDetailOpen(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle QR code scan
+  const handleQRScan = (data: string) => {
+    try {
+      const productId = parseInt(data.split('_')[1]);
+      if (!isNaN(productId)) {
+        // Check if this is a known product
+        const existingProduct = [...mockRecentScans, ...mockSavedProducts].find(p => p.productId === productId);
+        
+        if (existingProduct) {
+          setCurrentProduct(existingProduct);
+          verifyProduct(productId);
+        } else {
+          // New product scan
+          const newProduct: ScannedProduct = {
+            id: Date.now(),
+            product: `Product #${productId}`,
+            brand: 'Unknown Brand',
+            scannedDate: new Date().toISOString().split('T')[0],
+            farmer: 'Unknown Farmer',
+            origin: 'Unknown',
+            harvestDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            farmerShare: '75%',
+            verified: false,
+            productId,
+            imageUrl: '/placeholder-product.jpg'
+          };
+          
+          setCurrentProduct(newProduct);
+          setRecentScans(prev => [newProduct, ...prev]);
+          verifyProduct(productId);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing QR code:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to process QR code',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Handle save product
+  const handleSaveProduct = (product: ScannedProduct) => {
+    if (savedProducts.some(p => p.id === product.id)) {
+      setSavedProducts(prev => prev.filter(p => p.id !== product.id));
+      toast({
+        title: 'Product Removed',
+        description: 'Product has been removed from your saved items',
+      });
+    } else {
+      setSavedProducts(prev => [product, ...prev]);
+      toast({
+        title: 'Product Saved',
+        description: 'Product has been added to your saved items',
+      });
+    }
+  };
+
+  // Handle submit feedback
+  const handleSubmitFeedback = () => {
+    // In a real app, this would submit to a backend
+    toast({
+      title: 'Feedback Submitted',
+      description: 'Thank you for your feedback!',
+    });
+    setFeedback('');
+    setRating(5);
+    setIsFeedbackOpen(false);
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
+
+  // Wallet not connected state
+  if (!walletConnected) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <h2 className="text-2xl font-bold mb-4">Connect Your Wallet</h2>
+        <p className="text-muted-foreground mb-6 text-center">
+          Please connect your wallet to access the Consumer Dashboard
+        </p>
+        <Button onClick={connectWallet} disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Connecting...
+            </>
+          ) : (
+            'Connect Wallet'
+          )}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-green-800">Consumer Dashboard</h1>
+            <p className="text-gray-600">Welcome back, {profile?.first_name} {profile?.last_name}</p>
+          </div>
+          <Button 
+            className="mt-4 md:mt-0 bg-green-600 hover:bg-green-700" 
+            onClick={() => setIsQRScannerOpen(true)}
+            disabled={isLoading}
+          >
+            <QrCode className="mr-2 h-4 w-4" /> Scan Product
+          </Button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Scans</CardTitle>
+              <QrCode className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{recentScans.length}</div>
+              <p className="text-xs text-muted-foreground">Products scanned</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Saved Products</CardTitle>
+              <Heart className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{savedProducts.length}</div>
+              <p className="text-xs text-muted-foreground">In your collection</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Sustainability Score</CardTitle>
+              <Leaf className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {recentScans.length > 0 
+                  ? Math.round(recentScans.reduce((sum, item) => sum + (item.sustainabilityScore || 0), 0) / recentScans.length) 
+                  : 0}%
+              </div>
+              <p className="text-xs text-muted-foreground">Average of your purchases</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Farmer Support</CardTitle>
+              <Users className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {recentScans.length > 0 
+                  ? Math.round(recentScans.reduce((sum, item) => {
+                      const share = parseInt(item.farmerShare) || 0;
+                      return sum + share;
+                    }, 0) / recentScans.length) 
+                  : 0}%
+              </div>
+              <p className="text-xs text-muted-foreground">Average to farmers</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="recent" className="mb-8">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="recent">Recent Scans</TabsTrigger>
+            <TabsTrigger value="saved">Saved Products</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="recent" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recentScans.length > 0 ? (
+                recentScans.map((item) => (
+                  <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                    <div className="relative h-48 bg-gray-100">
+                      {item.imageUrl ? (
+                        <img 
+                          src={item.imageUrl} 
+                          alt={item.product}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                          <Package className="h-12 w-12 text-gray-300" />
+                        </div>
+                      )}
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute top-2 right-2 bg-white/80 rounded-full w-8 h-8"
+                        onClick={() => handleSaveProduct(item)}
+                      >
+                        <Heart 
+                          className={`h-4 w-4 ${savedProducts.some(p => p.id === item.id) ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} 
+                        />
+                      </Button>
+                      {item.verified && (
+                        <div className="absolute top-2 left-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center">
+                          <ShieldCheck className="h-3 w-3 mr-1" /> Verified
+                        </div>
+                      )}
+                    </div>
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg">{item.product}</CardTitle>
+                          <CardDescription className="text-sm">{item.brand}</CardDescription>
+                        </div>
+                        {item.sustainabilityScore && (
+                          <div className="flex flex-col items-center">
+                            <div className="text-xs text-muted-foreground">Sustainability</div>
+                            <div className="text-lg font-bold text-green-600">{item.sustainabilityScore}%</div>
+                          </div>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pb-2">
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="flex items-center text-muted-foreground">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          <span>{item.origin}</span>
+                        </div>
+                        <div className="flex items-center text-muted-foreground">
+                          <Users className="h-3 w-3 mr-1" />
+                          <span>Farmer: {item.farmer}</span>
+                        </div>
+                        <div className="flex items-center text-muted-foreground">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          <span>Harvest: {item.harvestDate}</span>
+                        </div>
+                        <div className="flex items-center text-muted-foreground">
+                          <Percent className="h-3 w-3 mr-1" />
+                          <span>Farmer Share: {item.farmerShare}</span>
+                        </div>
+                      </div>
+                      
+                      {item.certifications && item.certifications.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1">
+                          {item.certifications.map((cert, idx) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {cert}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                    <CardFooter className="flex justify-between pt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setCurrentProduct(item);
+                          verifyProduct(item.productId);
+                        }}
+                      >
+                        <ShieldCheck className="h-3 w-3 mr-1" /> Verify
+                      </Button>
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={() => {
+                          setCurrentProduct(item);
+                          setIsProductDetailOpen(true);
+                        }}
+                      >
+                        View Details
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))
+              ) : (
+                <div className="col-span-3 text-center py-12">
+                  <QrCode className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900">No recent scans</h3>
+                  <p className="text-gray-500 mt-1">Scan a product to get started</p>
+                  <Button 
+                    className="mt-4"
+                    onClick={() => setIsQRScannerOpen(true)}
+                  >
+                    <QrCode className="mr-2 h-4 w-4" /> Scan Product
+                  </Button>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="saved" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {savedProducts.length > 0 ? (
+                savedProducts.map((item) => (
+                  <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                    <div className="relative h-48 bg-gray-100">
+                      {item.imageUrl ? (
+                        <img 
+                          src={item.imageUrl} 
+                          alt={item.product}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                          <Package className="h-12 w-12 text-gray-300" />
+                        </div>
+                      )}
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute top-2 right-2 bg-white/80 rounded-full w-8 h-8"
+                        onClick={() => handleSaveProduct(item)}
+                      >
+                        <Heart className="h-4 w-4 fill-red-500 text-red-500" />
+                      </Button>
+                    </div>
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg">{item.product}</CardTitle>
+                          <CardDescription className="text-sm">{item.brand}</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pb-2">
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="flex items-center text-muted-foreground">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          <span>{item.origin}</span>
+                        </div>
+                        <div className="flex items-center text-muted-foreground">
+                          <Users className="h-3 w-3 mr-1" />
+                          <span>Farmer: {item.farmer}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between pt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setCurrentProduct(item);
+                          verifyProduct(item.productId);
+                        }}
+                      >
+                        <ShieldCheck className="h-3 w-3 mr-1" /> Verify
+                      </Button>
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={() => {
+                          setCurrentProduct(item);
+                          setIsProductDetailOpen(true);
+                        }}
+                      >
+                        View Details
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))
+              ) : (
+                <div className="col-span-3 text-center py-12">
+                  <Heart className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900">No saved products</h3>
+                  <p className="text-gray-500 mt-1">Save products to view them here</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* QR Code Scanner Dialog */}
+      <Dialog open={isQRScannerOpen} onOpenChange={setIsQRScannerOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Scan Product QR Code</DialogTitle>
+            <DialogDescription>
+              Scan a product's QR code to verify its authenticity and view details.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="border-2 border-dashed rounded-lg p-8 text-center">
+              <QrCode className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                {isLoading ? 'Processing...' : 'Position the QR code in the camera view'}
+              </p>
+              {isLoading && <Loader2 className="h-8 w-8 animate-spin mx-auto mt-4" />}
+            </div>
+            <div className="mt-4 text-center">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  // Simulate a scan for demo purposes
+                  handleQRScan('product_101');
+                }}
+                disabled={isLoading}
+              >
+                Simulate Scan
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Detail Dialog */}
+      <Dialog open={isProductDetailOpen} onOpenChange={setIsProductDetailOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              {currentProduct?.verified && (
+                <ShieldCheck className="h-5 w-5 text-green-500 mr-2" />
+              )}
+              {currentProduct?.product || 'Product Details'}
+            </DialogTitle>
+            <DialogDescription>
+              {currentProduct?.brand}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {currentProduct && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                    {currentProduct.imageUrl ? (
+                      <img 
+                        src={currentProduct.imageUrl} 
+                        alt={currentProduct.product}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="h-16 w-16 text-gray-300" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-medium">Sustainability Score</h4>
+                      <div className="text-3xl font-bold text-green-600">
+                        {currentProduct.sustainabilityScore || 'N/A'}
+                        {currentProduct.sustainabilityScore && '%'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <h4 className="font-medium">Farmer Share</h4>
+                      <div className="text-3xl font-bold text-green-600">
+                        {currentProduct.farmerShare}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Environmental Impact</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Carbon Footprint:</span>
+                        <span>{currentProduct.carbonFootprint || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Water Usage:</span>
+                        <span>{currentProduct.waterUsage || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Product Information</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Product ID:</span>
+                        <span>{currentProduct.productId}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Farmer:</span>
+                        <span>{currentProduct.farmer}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Origin:</span>
+                        <span>{currentProduct.origin}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Harvest Date:</span>
+                        <span>{currentProduct.harvestDate}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Scanned On:</span>
+                        <span>{currentProduct.scannedDate}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {currentProduct.certifications && currentProduct.certifications.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Certifications</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {currentProduct.certifications.map((cert, idx) => (
+                          <Badge key={idx} variant="outline" className="text-xs">
+                            {cert}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Ownership History</h4>
+                    <div className="space-y-2 text-sm">
+                      {verificationResult?.owners && verificationResult.owners.length > 0 ? (
+                        <div className="space-y-2">
+                          {verificationResult.owners.map((owner, idx) => (
+                            <div key={idx} className="flex items-center">
+                              <div className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-green-500' : 'bg-gray-300'} mr-2`}></div>
+                              <span className="truncate">{owner}</span>
+                              {idx === 0 && <span className="ml-2 text-xs text-green-600">(Current Owner)</span>}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">No ownership history available</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-between pt-4 border-t">
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setIsProductDetailOpen(false);
+                    setIsFeedbackOpen(true);
+                  }}
+                >
+                  <ThumbsUp className="h-4 w-4 mr-2" /> Leave Feedback
+                </Button>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => handleSaveProduct(currentProduct)}
+                  >
+                    <Heart 
+                      className={`h-4 w-4 mr-2 ${savedProducts.some(p => p.id === currentProduct.id) ? 'fill-red-500 text-red-500' : ''}`} 
+                    />
+                    {savedProducts.some(p => p.id === currentProduct.id) ? 'Saved' : 'Save'}
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      // In a real app, this would share the product
+                      toast({
+                        title: 'Share',
+                        description: 'Product sharing functionality would go here',
+                      });
+                    }}
+                  >
+                    Share
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Feedback Dialog */}
+      <Dialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Leave Feedback</DialogTitle>
+            <DialogDescription>
+              Share your experience with this product
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rating">Your Rating</Label>
+              <div className="flex items-center space-x-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Button
+                    key={star}
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRating(star)}
+                    className={cn(
+                      'h-10 w-10 hover:bg-yellow-50',
+                      star <= rating ? 'text-yellow-500' : 'text-gray-300'
+                    )}
+                  >
+                    <Star className="h-5 w-5 fill-current" />
+                  </Button>
+                ))}
+                <span className="ml-2 text-sm text-muted-foreground">
+                  {rating} star{rating !== 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="feedback">Your Feedback (Optional)</Label>
+              <Textarea
+                id="feedback"
+                placeholder="Share your thoughts about this product..."
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsFeedbackOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSubmitFeedback}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Feedback'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default ConsumerDashboard;
