@@ -186,7 +186,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    try {
+      await supabase.auth.signOut()
+    } finally {
+      // Proactively clear local auth state to avoid UI flashes
+      setSession(null)
+      setUser(null)
+      setProfile(null)
+      setUserRole(null)
+    }
   }
 
   const resetPassword = async (email: string) => {
