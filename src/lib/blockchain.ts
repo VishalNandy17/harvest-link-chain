@@ -68,7 +68,7 @@ class BlockchainService {
   private async getProvider(): Promise<BrowserProvider> {
     if (!this.provider) {
       if (typeof window.ethereum === 'undefined') {
-        throw new Error('Please install MetaMask!');
+        throw new Error('MetaMask not detected. Install MetaMask extension and refresh the page.');
       }
       this.provider = new ethers.BrowserProvider(window.ethereum);
     }
@@ -266,26 +266,38 @@ class BlockchainService {
   async connectWallet(): Promise<string> {
     try {
       const provider = await this.getProvider();
-      const accounts = await provider.send('eth_requestAccounts', []);
-      
-      if (accounts.length === 0) {
-        throw new Error('No accounts found');
+      let accounts: string[] = [];
+      try {
+        accounts = await provider.send('eth_requestAccounts', []);
+      } catch (requestError: any) {
+        // User denied or provider error
+        if (requestError?.code === 4001) {
+          throw new Error('Request denied in MetaMask. Please approve the connection request.');
+        }
+        throw new Error(requestError?.message || 'Failed to request accounts from MetaMask.');
       }
-      
+
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts returned by MetaMask. Ensure an account is unlocked.');
+      }
+
       const account = accounts[0];
-      
-      // Verify the account has the FARMER_ROLE
-      const contract = await this.getContract();
-      const hasFarmerRole = await contract.hasRole(this.FARMER_ROLE, account);
-      
-      if (!hasFarmerRole) {
-        throw new Error('This account does not have FARMER_ROLE. Please contact admin to grant farmer role.');
+
+      // Do not hard-fail on role checks; log a warning instead to avoid blocking connection
+      try {
+        const contract = await this.getContract();
+        const hasFarmerRole = await contract.hasRole?.(this.FARMER_ROLE, account);
+        if (!hasFarmerRole) {
+          console.warn('Connected account lacks FARMER_ROLE. Some on-chain actions may be restricted.');
+        }
+      } catch (roleCheckError) {
+        console.warn('Role check skipped due to contract/provider issue:', roleCheckError);
       }
-      
+
       return account;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error connecting wallet:', error);
-      throw error;
+      throw new Error(error?.message || 'Unable to connect MetaMask.');
     }
   }
 
@@ -411,13 +423,15 @@ class BlockchainService {
 
   // QR Code generation utilities
   generateProductQRCode(productId: number): string {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/verify/product/${productId}`;
+    const externalBase = 'https://krishtisetu.vercel.app';
+    const unique = (globalThis as any).crypto && (crypto as any).randomUUID ? (crypto as any).randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    return `${externalBase}/p/${productId}/${unique}`;
   }
 
   generateBatchQRCode(batchId: number): string {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/verify/batch/${batchId}`;
+    const externalBase = 'https://krishtisetu.vercel.app';
+    const unique = (globalThis as any).crypto && (crypto as any).randomUUID ? (crypto as any).randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    return `${externalBase}/b/${batchId}/${unique}`;
   }
 
   // Generate QR code data URL for display
@@ -434,6 +448,7 @@ class BlockchainService {
       const url = new URL(qrData);
       const pathParts = url.pathname.split('/');
       
+      // Support legacy format: /verify/product/:id
       if (pathParts.includes('product') && pathParts.length > 2) {
         const id = parseInt(pathParts[pathParts.indexOf('product') + 1]);
         return { type: 'product', id: isNaN(id) ? undefined : id };
@@ -441,6 +456,16 @@ class BlockchainService {
       
       if (pathParts.includes('batch') && pathParts.length > 2) {
         const id = parseInt(pathParts[pathParts.indexOf('batch') + 1]);
+        return { type: 'batch', id: isNaN(id) ? undefined : id };
+      }
+
+      // New public format: /p/:id/:unique? and /b/:id/:unique?
+      if (pathParts.includes('p') && pathParts.length > 2) {
+        const id = parseInt(pathParts[pathParts.indexOf('p') + 1]);
+        return { type: 'product', id: isNaN(id) ? undefined : id };
+      }
+      if (pathParts.includes('b') && pathParts.length > 2) {
+        const id = parseInt(pathParts[pathParts.indexOf('b') + 1]);
         return { type: 'batch', id: isNaN(id) ? undefined : id };
       }
       

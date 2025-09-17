@@ -16,6 +16,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
+import QRDetails from "./pages/QRDetails";
 
 // Role-specific dashboards
 import FarmerDashboard from "@/pages/dashboards/FarmerDashboard";
@@ -77,6 +78,9 @@ const App = () => (
             
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
+            {/* Public QR details routes (external QR format) */}
+            <Route path="/p/:id/:unique" element={<QRDetails />} />
+            <Route path="/b/:id/:unique" element={<QRDetails />} />
           </Routes>
           <PWAInstallPrompt />
         </AuthProvider>

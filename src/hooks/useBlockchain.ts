@@ -19,7 +19,7 @@ export const useBlockchain = () => {
 
       toast({
         title: "Success",
-        description: "Crop registered on blockchain",
+        description: "Crop registered and QR generated",
       });
 
       return data;
@@ -28,6 +28,36 @@ export const useBlockchain = () => {
       toast({
         title: "Error",
         description: "Failed to register crop",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const assignDistributor = async (batchId: string, distributorUserId: string, route?: string, vehicleCode?: string) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('assign-distributor', {
+        body: { batchId, distributorUserId, route, vehicleCode }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Distributor assigned",
+        description: "Batch assigned to distributor and tracking started",
+      });
+
+      return data;
+    } catch (error) {
+      console.error('Error assigning distributor:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign distributor",
         variant: "destructive",
       });
       throw error;
@@ -121,6 +151,7 @@ export const useBlockchain = () => {
     registerCrop,
     purchaseBatch,
     verifyQR,
-    getPricePrediction
+    getPricePrediction,
+    assignDistributor
   };
 };

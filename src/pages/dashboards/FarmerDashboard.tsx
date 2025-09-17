@@ -36,6 +36,7 @@ import {
 } from '@/lib/blockchain';
 import { QRCodeGenerator } from '@/components/QRCodeGenerator';
 import { supabase } from '@/integrations/supabase/client';
+import { useBlockchain } from '@/hooks/useBlockchain';
 
 const FarmerDashboard = () => {
   const { user, profile, userRole, loading } = useAuth();
@@ -82,6 +83,8 @@ const FarmerDashboard = () => {
   const [currentQRCode, setCurrentQRCode] = useState('');
   const [currentQRData, setCurrentQRData] = useState('');
   const [qrType, setQrType] = useState<'product' | 'batch'>('product');
+  const { registerCrop } = useBlockchain();
+  const [isStorageChoiceOpen, setIsStorageChoiceOpen] = useState(false);
   
   // Ensure this dashboard is only accessible to farmers
   useEffect(() => {
@@ -90,7 +93,7 @@ const FarmerDashboard = () => {
     }
   }, [userRole, loading, navigate]);
 
-  // Connect wallet and load data
+  // Connect wallet and load data (non-blocking)
   useEffect(() => {
     const init = async () => {
       try {
@@ -101,11 +104,7 @@ const FarmerDashboard = () => {
         }
       } catch (error) {
         console.error('Error initializing wallet:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to connect to wallet',
-          variant: 'destructive',
-        });
+        // Do not show destructive toast on init; keep dashboard usable without wallet
       } finally {
         setIsLoading(false);
       }
@@ -260,8 +259,8 @@ const FarmerDashboard = () => {
       setWalletAddress('');
       
       toast({
-        title: 'Connection Failed',
-        description: error.message || 'Failed to connect MetaMask wallet',
+        title: 'Could not connect MetaMask',
+        description: error.message || 'Check that MetaMask is installed, unlocked, and you approved the request.',
         variant: 'destructive',
       });
     } finally {
@@ -270,15 +269,67 @@ const FarmerDashboard = () => {
   };
 
   const handleCreateProduct = async () => {
-    if (!walletConnected) {
+    // Open storage choice modal
+    setIsStorageChoiceOpen(true);
+  };
+
+  const createProductOnSupabase = async () => {
+    if (!newProduct.name || !newProduct.description || !newProduct.price) {
       toast({
-        title: 'MetaMask Not Connected',
-        description: 'Please connect your MetaMask wallet first',
+        title: 'Missing Information',
+        description: 'Please fill in all required fields',
         variant: 'destructive',
       });
       return;
     }
 
+    try {
+      setIsCreatingProduct(true);
+      const cropPayload = {
+        name: newProduct.name,
+        quantity: parseFloat(batchDetails.quantityProduced || '0') || 0,
+        unit: 'kg',
+        pricePerUnit: parseFloat(newProduct.price || '0') || 0,
+        predictedPrice: undefined,
+        description: newProduct.description,
+        harvestDate: batchDetails.harvestDate || undefined,
+        location: [batchDetails.locationVillage, batchDetails.locationDistrict, batchDetails.locationState].filter(Boolean).join(', '),
+        certifications: batchDetails.certificationInfo ? batchDetails.certificationInfo.split(',').map(s => s.trim()) : [],
+      };
+      const resp: any = await registerCrop(cropPayload);
+      const qr = resp?.qrCode || resp?.batch?.qr_code;
+      if (qr) {
+        setQrType('batch');
+        setCurrentQRData(qr);
+        try {
+          const img = await generateQRCodeDataURL(qr);
+          setCurrentQRCode(img);
+        } catch (_) {}
+        setIsQRDialogOpen(true);
+      }
+      toast({
+        title: 'Crop submitted',
+        description: 'Saved via Supabase and anchored to blockchain records (no gas).',
+      });
+      setNewProduct({ name: '', description: '', imageHash: '', price: '' });
+      setIsProductDialogOpen(false);
+    } catch (e) {
+      // handled in hook
+    } finally {
+      setIsCreatingProduct(false);
+      setIsStorageChoiceOpen(false);
+    }
+  };
+
+  const ensureWalletConnected = async (): Promise<string> => {
+    if (walletConnected && walletAddress) return walletAddress;
+    const address = await connectWallet();
+    setWalletConnected(true);
+    setWalletAddress(address);
+    return address;
+  };
+
+  const createProductOnBlockchain = async () => {
     if (!newProduct.name || !newProduct.description || !newProduct.price) {
       toast({
         title: 'Missing Information',
@@ -300,40 +351,29 @@ const FarmerDashboard = () => {
 
     try {
       setIsCreatingProduct(true);
-      
-      // Create product on blockchain with INR pricing
+      await ensureWalletConnected();
       const productId = await createProductWithINR(
         newProduct.name,
         newProduct.description,
-        newProduct.imageHash || 'QmDefaultImageHash', // Default IPFS hash
+        newProduct.imageHash || 'QmDefaultImageHash',
         inrPrice
       );
-      
       toast({
         title: 'Success',
-        description: `Product "${newProduct.name}" created successfully with ID: ${productId} for ₹${inrPrice.toLocaleString()}`,
+        description: `Product "${newProduct.name}" created on blockchain with ID: ${productId}`,
       });
-      
-      // Reset form and close dialog
-      setNewProduct({
-        name: '',
-        description: '',
-        imageHash: '',
-        price: '',
-      });
+      setNewProduct({ name: '', description: '', imageHash: '', price: '' });
       setIsProductDialogOpen(false);
-      
-      // The product will be automatically added via event listener
-      
     } catch (error: any) {
-      console.error('Error creating product:', error);
+      console.error('Error creating product on blockchain:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to create product. Please check your wallet and try again.',
+        title: 'On-chain creation failed',
+        description: error?.message || 'Please check MetaMask and try again.',
         variant: 'destructive',
       });
     } finally {
       setIsCreatingProduct(false);
+      setIsStorageChoiceOpen(false);
     }
   };
 
@@ -1035,6 +1075,42 @@ const FarmerDashboard = () => {
         showDialog={isQRDialogOpen}
         onClose={() => setIsQRDialogOpen(false)}
       />
+
+      {/* Storage Choice Dialog */}
+      <Dialog open={isStorageChoiceOpen} onOpenChange={setIsStorageChoiceOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Where do you want to store this product?</DialogTitle>
+            <DialogDescription>
+              Choose Blockchain (MetaMask) for on-chain record, or Supabase (No MetaMask) for free gasless record with blockchain anchoring.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="border">
+              <CardHeader>
+                <CardTitle>Blockchain (MetaMask)</CardTitle>
+                <CardDescription>Requires MetaMask, on-chain record, transaction fees apply on real network.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={createProductOnBlockchain} disabled={isCreatingProduct} className="w-full">
+                  {isCreatingProduct ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</> : 'Store on Blockchain'}
+                </Button>
+              </CardContent>
+            </Card>
+            <Card className="border">
+              <CardHeader>
+                <CardTitle>Supabase (No MetaMask)</CardTitle>
+                <CardDescription>Free and instant. Data stored off-chain with blockchain-style proof (hash).</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" onClick={createProductOnSupabase} disabled={isCreatingProduct} className="w-full">
+                  {isCreatingProduct ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : 'Store in Supabase'}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Batch Creation Dialog */}
       <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>

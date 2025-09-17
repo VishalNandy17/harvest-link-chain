@@ -47,9 +47,8 @@ serve(async (req) => {
       throw new Error('Only farmers can register crops');
     }
 
-    // Generate batch number and QR code
+    // Generate batch number
     const batchNumber = `BATCH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const qrCode = `QR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     // Insert crop
     const { data: crop, error: cropError } = await supabase
@@ -73,19 +72,26 @@ serve(async (req) => {
       throw cropError;
     }
 
-    // Create batch
+    // Create batch with temporary QR
     const { data: batch, error: batchError } = await supabase
       .from('batches')
       .insert({
         crop_id: crop.id,
         batch_number: batchNumber,
-        qr_code: qrCode,
+        qr_code: 'PENDING',
         quantity: cropData.quantity,
         unit: cropData.unit || 'kg',
         price_per_unit: cropData.pricePerUnit
       })
       .select()
       .single();
+    // Build public QR URL using our external site and update batch
+    const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const qrCode = `https://krishtisetu.vercel.app/b/${encodeURIComponent(batch.id)}/${encodeURIComponent(unique)}`;
+    await supabase
+      .from('batches')
+      .update({ qr_code: qrCode })
+      .eq('id', batch.id);
 
     if (batchError) {
       throw batchError;
@@ -125,7 +131,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         crop: crop,
-        batch: batch,
+        batch: { ...batch, qr_code: qrCode },
         qrCode: qrCode,
         blockchainHash: hashHex
       }),
