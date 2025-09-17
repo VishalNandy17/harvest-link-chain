@@ -54,6 +54,10 @@ const FarmerDashboard = () => {
     description: '',
     imageHash: '',
     price: '',
+    quantityKg: '',
+    mspPerKg: '',
+    farmerWallet: '',
+    region: '',
   });
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [newBatch, setNewBatch] = useState({
@@ -83,7 +87,7 @@ const FarmerDashboard = () => {
   const [currentQRCode, setCurrentQRCode] = useState('');
   const [currentQRData, setCurrentQRData] = useState('');
   const [qrType, setQrType] = useState<'product' | 'batch'>('product');
-  const { registerCrop } = useBlockchain();
+  const { registerCrop, getPricePrediction } = useBlockchain();
   const [isStorageChoiceOpen, setIsStorageChoiceOpen] = useState(false);
   
   // Ensure this dashboard is only accessible to farmers
@@ -285,16 +289,30 @@ const FarmerDashboard = () => {
 
     try {
       setIsCreatingProduct(true);
+      // Suggest fair price via AI (optional)
+      let predictedPrice: number | undefined = undefined;
+      try {
+        const ai = await getPricePrediction(
+          newProduct.name,
+          parseFloat(newProduct.price || '0') || 0,
+          parseFloat(newProduct.quantityKg || batchDetails.quantityProduced || '0') || 0,
+          newProduct.region || [batchDetails.locationDistrict, batchDetails.locationState].filter(Boolean).join(', ')
+        );
+        predictedPrice = ai?.suggestedPrice ?? ai?.predictedPrice ?? undefined;
+      } catch (_) {}
       const cropPayload = {
         name: newProduct.name,
-        quantity: parseFloat(batchDetails.quantityProduced || '0') || 0,
+        quantity: parseFloat(newProduct.quantityKg || batchDetails.quantityProduced || '0') || 0,
         unit: 'kg',
         pricePerUnit: parseFloat(newProduct.price || '0') || 0,
-        predictedPrice: undefined,
+        predictedPrice,
         description: newProduct.description,
         harvestDate: batchDetails.harvestDate || undefined,
-        location: [batchDetails.locationVillage, batchDetails.locationDistrict, batchDetails.locationState].filter(Boolean).join(', '),
+        location: newProduct.region || [batchDetails.locationVillage, batchDetails.locationDistrict, batchDetails.locationState].filter(Boolean).join(', '),
         certifications: batchDetails.certificationInfo ? batchDetails.certificationInfo.split(',').map(s => s.trim()) : [],
+        mspPerKg: parseFloat(newProduct.mspPerKg || '0') || undefined,
+        farmerWallet: newProduct.farmerWallet || walletAddress || undefined,
+        imageHash: newProduct.imageHash || undefined,
       };
       const resp: any = await registerCrop(cropPayload);
       const qr = resp?.qrCode || resp?.batch?.qr_code;
@@ -311,7 +329,7 @@ const FarmerDashboard = () => {
         title: 'Crop submitted',
         description: 'Saved via Supabase and anchored to blockchain records (no gas).',
       });
-      setNewProduct({ name: '', description: '', imageHash: '', price: '' });
+      setNewProduct({ name: '', description: '', imageHash: '', price: '', quantityKg: '', mspPerKg: '', farmerWallet: '', region: '' });
       setIsProductDialogOpen(false);
     } catch (e) {
       // handled in hook
@@ -871,6 +889,52 @@ const FarmerDashboard = () => {
                       <p className="text-xs text-muted-foreground">
                         Price will be converted to ETH automatically for blockchain storage
                       </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="quantity-kg">Quantity (kg) *</Label>
+                      <Input 
+                        id="quantity-kg"
+                        type="number"
+                        step="0.01"
+                        value={newProduct.quantityKg}
+                        onChange={(e) => setNewProduct(prev => ({ ...prev, quantityKg: e.target.value }))}
+                        placeholder="100"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="msp">MSP (per kg) *</Label>
+                      <Input 
+                        id="msp"
+                        type="number"
+                        step="0.01"
+                        value={newProduct.mspPerKg}
+                        onChange={(e) => setNewProduct(prev => ({ ...prev, mspPerKg: e.target.value }))}
+                        placeholder="24"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="farmer-wallet">Farmer Wallet Address</Label>
+                      <Input 
+                        id="farmer-wallet"
+                        value={newProduct.farmerWallet}
+                        onChange={(e) => setNewProduct(prev => ({ ...prev, farmerWallet: e.target.value }))}
+                        placeholder="0x..."
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="region">Location / Region</Label>
+                      <Input 
+                        id="region"
+                        value={newProduct.region}
+                        onChange={(e) => setNewProduct(prev => ({ ...prev, region: e.target.value }))}
+                        placeholder="Village, District, State"
+                      />
                     </div>
                     
                     <div className="space-y-2">
