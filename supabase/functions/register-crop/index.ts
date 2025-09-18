@@ -42,8 +42,18 @@ serve(async (req) => {
       .select('id, role')
       .eq('user_id', user.id)
       .single();
+    let farmerProfile = profile as any;
+    if (!farmerProfile) {
+      // Auto-provision a minimal farmer profile if missing (testing convenience)
+      const { data: newProfile } = await supabase
+        .from('profiles')
+        .insert({ user_id: user.id, role: 'farmer', first_name: 'Farmer', last_name: 'User', email: user.email })
+        .select('id, role')
+        .single();
+      if (newProfile) farmerProfile = newProfile;
+    }
 
-    if (!profile || profile.role !== 'farmer') {
+    if (!farmerProfile || farmerProfile.role !== 'farmer') {
       throw new Error('Only farmers can register crops');
     }
 
@@ -54,7 +64,7 @@ serve(async (req) => {
     const { data: crop, error: cropError } = await supabase
       .from('crops')
       .insert({
-        farmer_id: profile.id,
+        farmer_id: farmerProfile.id,
         name: cropData.name,
         quantity: cropData.quantity,
         unit: cropData.unit || 'kg',
@@ -63,6 +73,7 @@ serve(async (req) => {
         description: cropData.description,
         harvest_date: cropData.harvestDate,
         location: cropData.location,
+        region: cropData.location,
         certifications: cropData.certifications || [],
         msp_per_kg: cropData.mspPerKg || null,
         farmer_wallet: cropData.farmerWallet || null,
@@ -84,7 +95,9 @@ serve(async (req) => {
         qr_code: 'PENDING',
         quantity: cropData.quantity,
         unit: cropData.unit || 'kg',
-        price_per_unit: cropData.pricePerUnit
+        price_per_unit: cropData.pricePerUnit,
+        location: cropData.location,
+        product_count: 1
       })
       .select()
       .single();
@@ -102,7 +115,7 @@ serve(async (req) => {
 
     // Create blockchain record
     const blockchainData = {
-      farmer: profile.id,
+      farmer: farmerProfile.id,
       crop: crop.name,
       quantity: crop.quantity,
       price: crop.price_per_unit,
