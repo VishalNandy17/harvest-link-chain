@@ -63,10 +63,7 @@ serve(async (req) => {
         description: cropData.description,
         harvest_date: cropData.harvestDate,
         location: cropData.location,
-        certifications: cropData.certifications || [],
-        msp_per_kg: cropData.mspPerKg || null,
-        farmer_wallet: cropData.farmerWallet || null,
-        image_hash: cropData.imageHash || null
+        certifications: cropData.certifications || []
       })
       .select()
       .single();
@@ -106,9 +103,6 @@ serve(async (req) => {
       crop: crop.name,
       quantity: crop.quantity,
       price: crop.price_per_unit,
-      msp_per_kg: crop.msp_per_kg,
-      farmer_wallet: crop.farmer_wallet,
-      ipfs_hash: crop.image_hash,
       timestamp: new Date().toISOString(),
       location: crop.location
     };
