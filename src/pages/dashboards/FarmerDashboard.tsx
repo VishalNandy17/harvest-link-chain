@@ -37,8 +37,6 @@ import {
 import { QRCodeGenerator } from '@/components/QRCodeGenerator';
 import { supabase } from '@/integrations/supabase/client';
 import { useBlockchain } from '@/hooks/useBlockchain';
-import AIPricePredictionSimple from '@/components/AIPricePredictionSimple';
-import { PredictionResponse } from '@/services/simpleAIService';
 
 const FarmerDashboard = () => {
   const { user, profile, userRole, loading } = useAuth();
@@ -49,7 +47,6 @@ const FarmerDashboard = () => {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [offchainBatches, setOffchainBatches] = useState<Array<{ id: string; qr: string; createdAt: string; location: string; productCount: number }>>([]);
   const [offchainProduce, setOffchainProduce] = useState<Array<{ id: string; crop: string; quantity: string; date: string; price: string; status: string; qr: string }>>([]);
-  const [procedures, setProcedures] = useState<Array<any>>([]);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
@@ -94,7 +91,6 @@ const FarmerDashboard = () => {
   const [qrType, setQrType] = useState<'product' | 'batch'>('product');
   const { registerCrop, getPricePrediction } = useBlockchain();
   const [isStorageChoiceOpen, setIsStorageChoiceOpen] = useState(false);
-  const [aiPrediction, setAiPrediction] = useState<PredictionResponse | null>(null);
   
   // Ensure this dashboard is only accessible to farmers
   useEffect(() => {
@@ -173,7 +169,6 @@ const FarmerDashboard = () => {
       // Load existing products and batches
       await loadExistingProducts(account);
       await loadExistingBatches(account);
-      await loadProcedures();
       
     } catch (error) {
       console.error('Error loading farm data:', error);
@@ -184,21 +179,6 @@ const FarmerDashboard = () => {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Load My Procedures from DB for persistent display
-  const loadProcedures = async () => {
-    try {
-      if (!profile?.id) return;
-      const { data, error } = await supabase
-        .from('my_procedures')
-        .select('*')
-        .eq('farmer_id', profile.id)
-        .order('created_at', { ascending: false });
-      if (!error && data) setProcedures(data);
-    } catch (e) {
-      // Non-fatal
     }
   };
 
@@ -231,24 +211,35 @@ const FarmerDashboard = () => {
 
   const loadExistingBatches = async (account: string) => {
     try {
-      // Load off-chain batches for this farmer for persistence
-      if (profile?.id) {
-        const { data } = await supabase
-          .from('my_batches_with_qr')
-          .select('*')
-          .eq('farmer_id', profile.id)
-          .order('created_at', { ascending: false });
-        // Map minimal shape for display in the existing section if needed
-        // We keep on-chain batches in `batches`, and off-chain are in `offchainBatches` state
-        const oc = (data || []).map((b: any) => ({
-          id: String(b.id),
-          qr: b.qr_code,
-          createdAt: b.created_at,
-          location: b.location,
-          productCount: b.product_count || 1,
-        }));
-        setOffchainBatches(oc);
+      // Get batch count from contract
+      const contract = await blockchainService.getContract();
+      const batchCount = await contract.batchCount();
+      
+      const farmerBatches: Batch[] = [];
+      
+      // Check each batch to see if it belongs to this farmer
+      for (let i = 1; i <= batchCount; i++) {
+        try {
+          const batch = await getBatch(i);
+          // Check if any of the products in this batch belong to this farmer
+          const batchProducts = await Promise.all(
+            batch.productIds.map(id => getProduct(id).catch(() => null))
+          );
+          
+          const hasFarmerProducts = batchProducts.some(product => 
+            product && product.farmer.toLowerCase() === account.toLowerCase()
+          );
+          
+          if (hasFarmerProducts) {
+            farmerBatches.push(batch);
+          }
+        } catch (error) {
+          // Batch might not exist, continue
+          continue;
+        }
       }
+      
+      setBatches(farmerBatches);
     } catch (error) {
       console.error('Error loading existing batches:', error);
     }
@@ -362,28 +353,6 @@ const FarmerDashboard = () => {
           },
           ...prev
         ]);
-
-        // Upsert into procedures so it appears under My Procedures
-        try {
-          await supabase.from('procedures').upsert({
-            farmer_id: profile?.id,
-            crop_id: resp?.crop?.id || null,
-            batch_id: resp?.batch?.id || null,
-            name: cropPayload.name,
-            description: cropPayload.description || '',
-            quantity: cropPayload.quantity,
-            unit: cropPayload.unit,
-            price_per_unit: cropPayload.pricePerUnit,
-            msp_per_kg: cropPayload.mspPerKg || null,
-            predicted_price: cropPayload.predictedPrice || null,
-            region: cropPayload.location || null,
-            image_hash: cropPayload.imageHash || null,
-            farmer_wallet: cropPayload.farmerWallet || null,
-            qr_code: qr,
-            status: 'listed'
-          }, { onConflict: 'qr_code' });
-          await loadProcedures();
-        } catch (_) {}
       }
       toast({
         title: 'Crop submitted',
@@ -761,12 +730,10 @@ const FarmerDashboard = () => {
         </div>
 
         <Tabs defaultValue="listings" className="mb-8">
-          <TabsList className="grid w-full grid-cols-7 mb-4">
+          <TabsList className="grid w-full grid-cols-5 mb-4">
             <TabsTrigger value="listings">My Produce</TabsTrigger>
             <TabsTrigger value="batches">My Batches</TabsTrigger>
-            <TabsTrigger value="procedures">My Procedures</TabsTrigger>
             <TabsTrigger value="add">Add New Produce</TabsTrigger>
-            <TabsTrigger value="ai-prediction">AI Prediction</TabsTrigger>
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
             <TabsTrigger value="advisory">Crop Advisory</TabsTrigger>
           </TabsList>
@@ -968,105 +935,6 @@ const FarmerDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
-          <TabsContent value="procedures" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>My Procedures</CardTitle>
-                <CardDescription>All procedures created via gasless or on-chain paths</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {procedures.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No procedures yet.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {procedures.map((p) => (
-                      <div key={p.id} className="border rounded-lg p-4 flex items-start justify-between">
-                        <div>
-                          <div className="font-medium">{p.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {p.quantity} {p.unit} • ₹{Number(p.price_per_unit).toLocaleString()} / kg • MSP {p.msp_per_kg ? `₹${Number(p.msp_per_kg).toLocaleString()}` : '—'}
-                          </div>
-                          <div className="text-xs text-muted-foreground break-all">QR: {p.qr_code}</div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            setQrType('batch');
-                            setCurrentQRData(p.qr_code);
-                            try { setCurrentQRCode(await generateQRCodeDataURL(p.qr_code)); } catch(_) {}
-                            setIsQRDialogOpen(true);
-                          }}
-                        >
-                          <QrCode className="h-3 w-3 mr-1" /> QR Code
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="ai-prediction" className="space-y-4">
-            <AIPricePredictionSimple 
-              onPredictionComplete={(prediction) => {
-                setAiPrediction(prediction);
-                toast({
-                  title: 'AI Prediction Complete',
-                  description: `Predicted price: ₹${prediction.predicted_price.toLocaleString()}`,
-                });
-              }}
-            />
-            
-            {aiPrediction && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Brain className="h-5 w-5" />
-                    Latest Prediction Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">
-                        ₹{aiPrediction.predicted_price.toLocaleString()}
-                      </div>
-                      <div className="text-sm text-gray-600">Predicted Price</div>
-                    </div>
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <div className="text-lg font-semibold text-blue-600">
-                        {aiPrediction.model_metadata.model_type}
-                      </div>
-                      <div className="text-sm text-gray-600">AI Model</div>
-                    </div>
-                    <div className="text-center p-4 bg-purple-50 rounded-lg">
-                      <div className="text-lg font-semibold text-purple-600">
-                        {aiPrediction.confidence_interval[1] - aiPrediction.confidence_interval[0] < aiPrediction.predicted_price * 0.1 ? 'High' : 'Medium'}
-                      </div>
-                      <div className="text-sm text-gray-600">Confidence</div>
-                    </div>
-                  </div>
-                  
-                  {aiPrediction.recommendations && aiPrediction.recommendations.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="font-semibold mb-2">Key Recommendations:</h4>
-                      <ul className="space-y-1">
-                        {aiPrediction.recommendations.slice(0, 3).map((rec, index) => (
-                          <li key={index} className="flex items-start gap-2 text-sm">
-                            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                            {rec}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
           
           <TabsContent value="add">
             <Card>
@@ -1116,32 +984,9 @@ const FarmerDashboard = () => {
                           required
                         />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-muted-foreground">
-                          Price will be converted to ETH automatically for blockchain storage
-                        </p>
-                        {aiPrediction && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setNewProduct(prev => ({ 
-                                ...prev, 
-                                price: aiPrediction.predicted_price.toString() 
-                              }));
-                              toast({
-                                title: 'AI Price Applied',
-                                description: `Applied AI predicted price: ₹${aiPrediction.predicted_price.toLocaleString()}`,
-                              });
-                            }}
-                            className="text-xs"
-                          >
-                            <Brain className="h-3 w-3 mr-1" />
-                            Use AI Price
-                          </Button>
-                        )}
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Price will be converted to ETH automatically for blockchain storage
+                      </p>
                     </div>
                     
                     <div className="space-y-2">
