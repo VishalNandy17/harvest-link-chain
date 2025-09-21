@@ -45,6 +45,8 @@ const FarmerDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [offchainBatches, setOffchainBatches] = useState<Array<{ id: string; qr: string; createdAt: string; location: string; productCount: number }>>([]);
+  const [offchainProduce, setOffchainProduce] = useState<Array<{ id: string; crop: string; quantity: string; date: string; price: string; status: string; qr: string }>>([]);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
@@ -54,6 +56,10 @@ const FarmerDashboard = () => {
     description: '',
     imageHash: '',
     price: '',
+    quantityKg: '',
+    mspPerKg: '',
+    farmerWallet: '',
+    region: '',
   });
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [newBatch, setNewBatch] = useState({
@@ -83,7 +89,7 @@ const FarmerDashboard = () => {
   const [currentQRCode, setCurrentQRCode] = useState('');
   const [currentQRData, setCurrentQRData] = useState('');
   const [qrType, setQrType] = useState<'product' | 'batch'>('product');
-  const { registerCrop } = useBlockchain();
+  const { registerCrop, getPricePrediction } = useBlockchain();
   const [isStorageChoiceOpen, setIsStorageChoiceOpen] = useState(false);
   
   // Ensure this dashboard is only accessible to farmers
@@ -285,16 +291,30 @@ const FarmerDashboard = () => {
 
     try {
       setIsCreatingProduct(true);
+      // Suggest fair price via AI (optional)
+      let predictedPrice: number | undefined = undefined;
+      try {
+        const ai = await getPricePrediction(
+          newProduct.name,
+          parseFloat(newProduct.price || '0') || 0,
+          parseFloat(newProduct.quantityKg || batchDetails.quantityProduced || '0') || 0,
+          newProduct.region || [batchDetails.locationDistrict, batchDetails.locationState].filter(Boolean).join(', ')
+        );
+        predictedPrice = ai?.suggestedPrice ?? ai?.predictedPrice ?? undefined;
+      } catch (_) {}
       const cropPayload = {
         name: newProduct.name,
-        quantity: parseFloat(batchDetails.quantityProduced || '0') || 0,
+        quantity: parseFloat(newProduct.quantityKg || batchDetails.quantityProduced || '0') || 0,
         unit: 'kg',
         pricePerUnit: parseFloat(newProduct.price || '0') || 0,
-        predictedPrice: undefined,
+        predictedPrice,
         description: newProduct.description,
         harvestDate: batchDetails.harvestDate || undefined,
-        location: [batchDetails.locationVillage, batchDetails.locationDistrict, batchDetails.locationState].filter(Boolean).join(', '),
+        location: newProduct.region || [batchDetails.locationVillage, batchDetails.locationDistrict, batchDetails.locationState].filter(Boolean).join(', '),
         certifications: batchDetails.certificationInfo ? batchDetails.certificationInfo.split(',').map(s => s.trim()) : [],
+        mspPerKg: parseFloat(newProduct.mspPerKg || '0') || undefined,
+        farmerWallet: newProduct.farmerWallet || walletAddress || undefined,
+        imageHash: newProduct.imageHash || undefined,
       };
       const resp: any = await registerCrop(cropPayload);
       const qr = resp?.qrCode || resp?.batch?.qr_code;
@@ -306,12 +326,39 @@ const FarmerDashboard = () => {
           setCurrentQRCode(img);
         } catch (_) {}
         setIsQRDialogOpen(true);
+
+        // Update My Batches (off-chain entry)
+        const batchId = resp?.batch?.id || `${Date.now()}`;
+        setOffchainBatches(prev => [
+          {
+            id: String(batchId),
+            qr,
+            createdAt: resp?.batch?.created_at || new Date().toISOString(),
+            location: cropPayload.location,
+            productCount: 1
+          },
+          ...prev
+        ]);
+
+        // Update My Produce Listings (off-chain entry)
+        setOffchainProduce(prev => [
+          {
+            id: String(batchId),
+            crop: cropPayload.name,
+            quantity: `${cropPayload.quantity} ${cropPayload.unit}`,
+            date: new Date().toLocaleDateString(),
+            price: `₹${cropPayload.pricePerUnit}`,
+            status: 'Listed',
+            qr
+          },
+          ...prev
+        ]);
       }
       toast({
         title: 'Crop submitted',
         description: 'Saved via Supabase and anchored to blockchain records (no gas).',
       });
-      setNewProduct({ name: '', description: '', imageHash: '', price: '' });
+      setNewProduct({ name: '', description: '', imageHash: '', price: '', quantityKg: '', mspPerKg: '', farmerWallet: '', region: '' });
       setIsProductDialogOpen(false);
     } catch (e) {
       // handled in hook
@@ -711,6 +758,43 @@ const FarmerDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
+                      {/* Off-chain produce listings */}
+                      {offchainProduce.map((item) => (
+                        <tr key={`off-${item.id}`} className="border-b hover:bg-muted/50">
+                          <td className="py-3 px-2">{item.crop}</td>
+                          <td className="py-3 px-2">{item.quantity}</td>
+                          <td className="py-3 px-2">{item.date}</td>
+                          <td className="py-3 px-2">{item.price}</td>
+                          <td className="py-3 px-2">
+                            <Badge 
+                              variant="outline" 
+                              className={cn(
+                                item.status === 'Listed' && 'border-blue-500 text-blue-500',
+                                item.status === 'Sold' && 'border-green-500 text-green-500',
+                                item.status === 'In Transit' && 'border-orange-500 text-orange-500'
+                              )}
+                            >
+                              {item.status}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={async () => {
+                                setQrType('batch');
+                                setCurrentQRData(item.qr);
+                                try { setCurrentQRCode(await generateQRCodeDataURL(item.qr)); } catch(_) {}
+                                setIsQRDialogOpen(true);
+                              }}
+                              className="mr-2"
+                            >
+                              <QrCode className="h-3 w-3 mr-1" /> QR Code
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                      {/* On-chain produce listings */}
                       {recentProduceListings.map((item) => (
                         <tr key={item.id} className="border-b hover:bg-muted/50">
                           <td className="py-3 px-2">{item.crop}</td>
@@ -769,7 +853,7 @@ const FarmerDashboard = () => {
                   </Button>
                 </div>
                 
-                {batches.length === 0 ? (
+                {batches.length === 0 && offchainBatches.length === 0 ? (
                   <div className="text-center py-8">
                     <Tractor className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No batches yet</h3>
@@ -785,6 +869,38 @@ const FarmerDashboard = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
+                    {/* Off-chain batches */}
+                    {offchainBatches.map((batch) => (
+                      <div key={`off-${batch.id}`} className="border rounded-lg p-4 hover:bg-muted/50">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-medium">Batch #{batch.id}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {batch.productCount} products • Created {new Date(batch.createdAt).toLocaleDateString()}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Location: {batch.location}
+                            </p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={async () => {
+                                setQrType('batch');
+                                setCurrentQRData(batch.qr);
+                                try { setCurrentQRCode(await generateQRCodeDataURL(batch.qr)); } catch(_) {}
+                                setIsQRDialogOpen(true);
+                              }}
+                            >
+                              <QrCode className="h-3 w-3 mr-1" /> QR Code
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* On-chain batches */}
                     {batches.map((batch) => (
                       <div key={batch.id} className="border rounded-lg p-4 hover:bg-muted/50">
                         <div className="flex justify-between items-start">
@@ -871,6 +987,52 @@ const FarmerDashboard = () => {
                       <p className="text-xs text-muted-foreground">
                         Price will be converted to ETH automatically for blockchain storage
                       </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="quantity-kg">Quantity (kg) *</Label>
+                      <Input 
+                        id="quantity-kg"
+                        type="number"
+                        step="0.01"
+                        value={newProduct.quantityKg}
+                        onChange={(e) => setNewProduct(prev => ({ ...prev, quantityKg: e.target.value }))}
+                        placeholder="100"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="msp">MSP (per kg) *</Label>
+                      <Input 
+                        id="msp"
+                        type="number"
+                        step="0.01"
+                        value={newProduct.mspPerKg}
+                        onChange={(e) => setNewProduct(prev => ({ ...prev, mspPerKg: e.target.value }))}
+                        placeholder="24"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="farmer-wallet">Farmer Wallet Address</Label>
+                      <Input 
+                        id="farmer-wallet"
+                        value={newProduct.farmerWallet}
+                        onChange={(e) => setNewProduct(prev => ({ ...prev, farmerWallet: e.target.value }))}
+                        placeholder="0x..."
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="region">Location / Region</Label>
+                      <Input 
+                        id="region"
+                        value={newProduct.region}
+                        onChange={(e) => setNewProduct(prev => ({ ...prev, region: e.target.value }))}
+                        placeholder="Village, District, State"
+                      />
                     </div>
                     
                     <div className="space-y-2">
