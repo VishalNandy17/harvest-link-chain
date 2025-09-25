@@ -13,8 +13,14 @@ export const useBlockchain = () => {
         body: { cropData }
       });
 
+      // If supabase-js surfaced an error, throw it
       if (error) {
         throw error;
+      }
+
+      // The function may return a 200 with an `{ error: '...' }` payload; treat that as an error
+      if (data && (data as any).error) {
+        throw new Error((data as any).error);
       }
 
       toast({
