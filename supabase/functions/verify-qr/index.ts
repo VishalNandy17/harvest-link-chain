@@ -15,6 +15,18 @@ serve(async (req) => {
   try {
     const { qrCode } = await req.json();
 
+    // Normalize and attempt to extract batch id from new URLs like /b/:id/:unique
+    let batchId: number | null = null;
+    try {
+      const url = new URL(qrCode);
+      const parts = url.pathname.split('/').filter(Boolean);
+      const idx = parts.indexOf('b');
+      if (idx >= 0 && parts[idx + 1]) {
+        const parsed = parseInt(parts[idx + 1]);
+        if (!Number.isNaN(parsed)) batchId = parsed;
+      }
+    } catch (_) {}
+
     // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -22,7 +34,7 @@ serve(async (req) => {
     );
 
     // Get batch information with full supply chain data
-    const { data: batch } = await supabase
+    const baseSelect = supabase
       .from('batches')
       .select(`
         *,
@@ -54,8 +66,16 @@ serve(async (req) => {
           *
         )
       `)
-      .eq('qr_code', qrCode)
-      .single();
+    
+    const { data: batchById } = batchId
+      ? await baseSelect.eq('id', batchId).maybeSingle()
+      : { data: null } as any;
+    
+    const { data: batchByQr } = !batchById
+      ? await baseSelect.eq('qr_code', qrCode).maybeSingle()
+      : { data: null } as any;
+    
+    const batch = batchById || batchByQr;
 
     if (!batch) {
       return new Response(
@@ -68,30 +88,34 @@ serve(async (req) => {
     }
 
     // Build supply chain journey
-    const journey = [];
+    const journey: any[] = [];
 
     // Farmer registration
-    journey.push({
-      step: 'Crop Registration',
-      actor: `${batch.crops.farmer.first_name} ${batch.crops.farmer.last_name}`,
-      role: 'Farmer',
-      timestamp: batch.crops.created_at,
-      location: batch.crops.location,
-      details: {
-        crop: batch.crops.name,
-        quantity: `${batch.crops.quantity} ${batch.crops.unit}`,
-        harvestDate: batch.crops.harvest_date,
-        certifications: batch.crops.certifications
-      },
-      verified: true
-    });
+    const farmerFirst = batch?.crops?.farmer?.first_name || '';
+    const farmerLast = batch?.crops?.farmer?.last_name || '';
+    if (batch?.crops) {
+      journey.push({
+        step: 'Crop Registration',
+        actor: `${farmerFirst} ${farmerLast}`.trim() || 'Unknown Farmer',
+        role: 'Farmer',
+        timestamp: batch.crops.created_at,
+        location: batch.crops.location,
+        details: {
+          crop: batch.crops.name,
+          quantity: `${batch.crops.quantity ?? batch.quantity} ${batch.crops.unit ?? batch.unit}`,
+          harvestDate: batch.crops.harvest_date,
+          certifications: batch.crops.certifications || []
+        },
+        verified: true
+      });
+    }
 
     // Add transactions to journey
-    batch.transactions.forEach(transaction => {
+    (batch.transactions || []).forEach((transaction: any) => {
       journey.push({
         step: 'Purchase',
-        actor: `${transaction.buyer.first_name} ${transaction.buyer.last_name}`,
-        role: transaction.buyer.role,
+        actor: `${transaction?.buyer?.first_name ?? ''} ${transaction?.buyer?.last_name ?? ''}`.trim() || 'Unknown Buyer',
+        role: transaction?.buyer?.role || 'Distributor',
         timestamp: transaction.created_at,
         details: {
           quantity: `${transaction.quantity} ${batch.unit}`,
@@ -103,13 +127,13 @@ serve(async (req) => {
     });
 
     // Calculate fair price verification
-    const farmerPrice = batch.crops.price_per_unit;
-    const predictedPrice = batch.crops.predicted_price;
+    const farmerPrice = batch?.crops?.price_per_unit ?? batch?.price_per_unit;
+    const predictedPrice = batch?.crops?.predicted_price ?? null;
     const fairPriceAchieved = predictedPrice ? (farmerPrice >= predictedPrice * 0.9) : true;
 
     // Blockchain verification
-    const blockchainVerified = batch.blockchain_records.length > 0 && 
-                              batch.blockchain_records.every(record => record.verified);
+    const blockchainVerified = (batch.blockchain_records || []).length > 0 && 
+                              (batch.blockchain_records || []).every((record: any) => record.verified);
 
     const verificationResult = {
       success: true,
@@ -120,17 +144,17 @@ serve(async (req) => {
         status: batch.status
       },
       product: {
-        name: batch.crops.name,
+        name: batch?.crops?.name || 'Unknown',
         quantity: `${batch.quantity} ${batch.unit}`,
         pricePerUnit: `₹${batch.price_per_unit}`,
-        description: batch.crops.description,
-        harvestDate: batch.crops.harvest_date,
-        certifications: batch.crops.certifications || []
+        description: batch?.crops?.description || '',
+        harvestDate: batch?.crops?.harvest_date || null,
+        certifications: (batch?.crops?.certifications as any) || []
       },
       farmer: {
-        name: `${batch.crops.farmer.first_name} ${batch.crops.farmer.last_name}`,
-        location: batch.crops.location,
-        contact: batch.crops.farmer.phone
+        name: `${farmerFirst} ${farmerLast}`.trim() || 'Unknown Farmer',
+        location: batch?.crops?.location || '',
+        contact: batch?.crops?.farmer?.phone || ''
       },
       verification: {
         blockchainVerified,
@@ -138,7 +162,7 @@ serve(async (req) => {
         recordsCount: batch.blockchain_records.length,
         lastVerified: batch.blockchain_records[0]?.timestamp
       },
-      supplyChain: journey.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)),
+      supplyChain: journey.sort((a: any, b: any) => new Date(a.timestamp as any) as any - new Date(b.timestamp as any) as any),
       analytics: {
         farmerPrice: farmerPrice,
         predictedPrice: predictedPrice,

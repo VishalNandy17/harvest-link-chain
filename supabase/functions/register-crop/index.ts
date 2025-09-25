@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    // Validate auth header but allow function to be called with anon key in some dev setups
+    // Validate auth header
     const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
 
     // Initialize Supabase client using service role for server-side operations
@@ -23,17 +23,17 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Try to resolve user from auth header if present
+    // Resolve user from auth header; require authentication
     let user: any = null;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.replace(/^Bearer\s+/i, '');
       const { data: userData, error: userError } = await supabase.auth.getUser(token);
       if (!userError && userData?.user) {
         user = userData.user;
-      } else {
-        // Log and continue — we'll still validate farmer profile from DB when possible
-        console.warn('Could not resolve user from token:', userError?.message ?? 'unknown');
       }
+    }
+    if (!user?.id) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const body = await req.json().catch(() => ({}));
@@ -42,27 +42,28 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing cropData or name' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Get farmer profile by user_id if user resolved, otherwise attempt to find profile by farmer_wallet (fallback)
+    // Get or create farmer profile for this user
     let profile: any = null;
-    if (user?.id) {
-      const { data: p, error: pErr } = await supabase
-        .from('profiles')
-        .select('id, role')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-      if (!pErr) profile = p;
-    }
+    const { data: p, error: pErr } = await supabase
+      .from('profiles')
+      .select('id, role, first_name, last_name, email')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle();
+    if (!pErr) profile = p;
 
-    // If no profile via auth token, try to match by supplied farmerWallet
-    if (!profile && cropData.farmerWallet) {
-      const { data: p2, error: p2Err } = await supabase
+    if (!profile) {
+      const email = user.email || `user-${user.id}@example.local`;
+      const { data: created, error: createErr } = await supabase
         .from('profiles')
-        .select('id, role')
-        .eq('wallet_address', cropData.farmerWallet)
-        .limit(1)
+        .insert([{ user_id: user.id, email, first_name: '', last_name: '', role: 'farmer' }])
+        .select('id, role, first_name, last_name, email')
         .maybeSingle();
-      if (!p2Err) profile = p2;
+      if (createErr) {
+        console.error('Profile create error:', createErr);
+        return new Response(JSON.stringify({ error: 'Failed to create profile' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      profile = created;
     }
 
     if (!profile || profile.role !== 'farmer') {
@@ -72,23 +73,21 @@ serve(async (req) => {
     // Generate batch number
     const batchNumber = `BATCH-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-    // Insert crop
+    // Insert crop (only schema-supported fields)
     const { data: cropRows, error: cropError } = await supabase
       .from('crops')
       .insert([{
         farmer_id: profile.id,
         name: cropData.name,
-        quantity: cropData.quantity,
+        quantity: Number(cropData.quantity) || 0,
         unit: cropData.unit || 'kg',
-        price_per_unit: cropData.pricePerUnit,
-        predicted_price: cropData.predictedPrice,
-        description: cropData.description,
-        harvest_date: cropData.harvestDate,
-        location: cropData.location,
-        certifications: cropData.certifications || [],
-        msp_per_kg: cropData.mspPerKg || null,
-        farmer_wallet: cropData.farmerWallet || null,
-        image_hash: cropData.imageHash || null
+        price_per_unit: Number(cropData.pricePerUnit) || 0,
+        predicted_price: cropData.predictedPrice ?? null,
+        description: cropData.description || null,
+        harvest_date: cropData.harvestDate || null,
+        location: cropData.location || null,
+        certifications: Array.isArray(cropData.certifications) ? cropData.certifications : [],
+        status: 'created'
       }])
       .select();
 
@@ -102,12 +101,13 @@ serve(async (req) => {
     const { data: batchRows, error: batchError } = await supabase
       .from('batches')
       .insert([{
-        crop_id: crop?.id ?? null,
+        crop_id: crop?.id,
         batch_number: batchNumber,
         qr_code: 'PENDING',
-        quantity: cropData.quantity,
+        quantity: Number(cropData.quantity) || 0,
         unit: cropData.unit || 'kg',
-        price_per_unit: cropData.pricePerUnit
+        price_per_unit: Number(cropData.pricePerUnit) || 0,
+        status: 'created'
       }])
       .select();
 
@@ -144,9 +144,6 @@ serve(async (req) => {
         crop: crop.name,
         quantity: crop.quantity,
         price: crop.price_per_unit,
-        msp_per_kg: crop.msp_per_kg,
-        farmer_wallet: crop.farmer_wallet,
-        ipfs_hash: crop.image_hash,
         timestamp: new Date().toISOString(),
         location: crop.location
       };
