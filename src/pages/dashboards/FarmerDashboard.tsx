@@ -185,8 +185,7 @@ const FarmerDashboard = () => {
   const loadExistingProducts = async (account: string) => {
     try {
       // Get product count from contract
-      const contract = await blockchainService.getContract();
-      const productCount = await contract.productCount();
+      const productCount = await blockchainService.getProductCount();
       
       const farmerProducts: Product[] = [];
       
@@ -212,8 +211,7 @@ const FarmerDashboard = () => {
   const loadExistingBatches = async (account: string) => {
     try {
       // Get batch count from contract
-      const contract = await blockchainService.getContract();
-      const batchCount = await contract.batchCount();
+      const batchCount = await blockchainService.getBatchCount();
       
       const farmerBatches: Batch[] = [];
       
@@ -430,7 +428,16 @@ const FarmerDashboard = () => {
         title: 'Success',
         description: `Product "${newProduct.name}" created on blockchain with ID: ${productId}`,
       });
-      setNewProduct({ name: '', description: '', imageHash: '', price: '' });
+      setNewProduct({ 
+        name: '', 
+        description: '', 
+        imageHash: '', 
+        price: '',
+        quantityKg: '',
+        mspPerKg: '',
+        farmerWallet: '',
+        region: ''
+      });
       setIsProductDialogOpen(false);
     } catch (error: any) {
       console.error('Error creating product on blockchain:', error);
@@ -492,24 +499,11 @@ const FarmerDashboard = () => {
         const qrUrl = generateBatchQRCode(batchId);
         await supabase.from('batches').insert({
           batch_id: batchId,
-          farmer_wallet: walletAddress,
-          farmer_id: batchDetails.farmerId,
-          farmer_name: batchDetails.farmerName,
-          phone: batchDetails.phone,
-          village: batchDetails.locationVillage,
-          district: batchDetails.locationDistrict,
-          state: batchDetails.locationState,
-          land_survey: batchDetails.landSurveyNumber,
-          crop_type: batchDetails.cropType,
-          crop_variety: batchDetails.cropVariety,
-          crop_grade: batchDetails.cropGrade,
-          cultivation_date: batchDetails.cultivationDate || null,
-          harvest_date: batchDetails.harvestDate || null,
-          quantity_produced: batchDetails.quantityProduced,
-          certification_info: batchDetails.certificationInfo,
-          product_ids: newBatch.productIds,
-          location: newBatch.location,
-          qr_url: qrUrl
+          farmer_id: user?.id || '',
+          product_name: batchDetails.cropType,
+          quantity_kg: parseFloat(batchDetails.quantityProduced || '0'),
+          price_per_kg: 0, // You can calculate this from the batch
+          location: `${batchDetails.locationVillage}, ${batchDetails.locationDistrict}, ${batchDetails.locationState}`
         });
       } catch (err) {
         console.error('Error saving batch details:', err);
@@ -578,10 +572,16 @@ const FarmerDashboard = () => {
       return sum + convertETHToINR(product.price);
     }, 0);
     
+    // Calculate monthly earnings (mock for now - in real app, filter by date)
+    const thisMonthValue = soldValue * 0.6; // Mock: assume 60% of sales this month
+    const lastMonthValue = soldValue * 0.4; // Mock: assume 40% of sales last month
+    
     return {
       total: `₹${totalValue.toLocaleString()}`,
       pending: `₹${pendingValue.toLocaleString()}`,
       sold: `₹${soldValue.toLocaleString()}`,
+      thisMonth: `₹${thisMonthValue.toLocaleString()}`,
+      lastMonth: `₹${lastMonthValue.toLocaleString()}`,
       activeListings: products.length
     };
   };

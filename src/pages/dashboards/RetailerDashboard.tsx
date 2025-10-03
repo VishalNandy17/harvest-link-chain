@@ -534,7 +534,7 @@ const RetailerDashboard = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => verifyProduct(item)}
+                          onClick={() => verifyProductByItem(item)}
                           className="w-full md:w-auto"
                         >
                           <ShieldCheck className="h-3 w-3 mr-1" /> View Blockchain Record

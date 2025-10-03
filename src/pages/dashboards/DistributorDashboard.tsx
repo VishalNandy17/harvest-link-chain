@@ -130,14 +130,16 @@ const DistributorDashboard = () => {
           productIds: [1, 2, 3],
           currentHandler: '0x123...',
           createdAt: Date.now() / 1000 - 86400, // 1 day ago
-          location: 'Central Warehouse'
+          location: 'Central Warehouse',
+          status: 0
         },
         {
           id: 2,
           productIds: [4, 5],
           currentHandler: '0x123...',
           createdAt: Date.now() / 1000 - 172800, // 2 days ago
-          location: 'In Transit to Retailer'
+          location: 'In Transit to Retailer',
+          status: 0
         }
       ]);
     } catch (error) {

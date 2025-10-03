@@ -222,7 +222,7 @@ class BlockchainService {
   }
 
   // Subscribe to specific event types
-  public on(eventType: BlockchainEventType, callback: EventCallback): () => void {
+  public on(eventType: BlockchainEventType | '*', callback: EventCallback): () => void {
     if (!this.eventListeners[eventType]) {
       this.eventListeners[eventType] = [];
     }
@@ -230,6 +230,20 @@ class BlockchainService {
     return () => {
       this.eventListeners[eventType] = this.eventListeners[eventType].filter(cb => cb !== callback);
     };
+  }
+
+  // Public method to get product count
+  public async getProductCount(): Promise<number> {
+    const contract = await this.getContract();
+    const count = await contract.productCount();
+    return Number(count);
+  }
+
+  // Public method to get batch count
+  public async getBatchCount(): Promise<number> {
+    const contract = await this.getContract();
+    const count = await contract.batchCount();
+    return Number(count);
   }
 
   // Get event history
