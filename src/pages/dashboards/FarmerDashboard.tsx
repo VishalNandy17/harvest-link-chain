@@ -497,14 +497,17 @@ const FarmerDashboard = () => {
       // Persist batch metadata to Supabase for off-chain details and QR mapping
       try {
         const qrUrl = generateBatchQRCode(batchId);
-        await supabase.from('batches').insert({
-          batch_id: batchId,
+        const { error: insertError } = await supabase.from('batches').insert([{
+          batch_id: batchId.toString(),
           farmer_id: user?.id || '',
           product_name: batchDetails.cropType,
           quantity_kg: parseFloat(batchDetails.quantityProduced || '0'),
-          price_per_kg: 0, // You can calculate this from the batch
+          price_per_kg: 0,
           location: `${batchDetails.locationVillage}, ${batchDetails.locationDistrict}, ${batchDetails.locationState}`
-        });
+        }]);
+        if (insertError) {
+          console.error('Error inserting batch:', insertError);
+        }
       } catch (err) {
         console.error('Error saving batch details:', err);
       }
