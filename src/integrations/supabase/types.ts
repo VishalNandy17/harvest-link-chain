@@ -18,40 +18,154 @@ export type Database = {
         Row: {
           batch_id: string
           created_at: string
+          crop_id: string | null
           farmer_id: string
           id: string
           location: string | null
           price_per_kg: number
           product_name: string
+          qr_code: string | null
           quantity_kg: number
           status: string
+          unit: string | null
           updated_at: string
         }
         Insert: {
           batch_id: string
           created_at?: string
+          crop_id?: string | null
           farmer_id: string
           id?: string
           location?: string | null
           price_per_kg: number
           product_name: string
+          qr_code?: string | null
           quantity_kg: number
           status?: string
+          unit?: string | null
           updated_at?: string
         }
         Update: {
           batch_id?: string
           created_at?: string
+          crop_id?: string | null
           farmer_id?: string
           id?: string
           location?: string | null
           price_per_kg?: number
           product_name?: string
+          qr_code?: string | null
           quantity_kg?: number
           status?: string
+          unit?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "batches_crop_id_fkey"
+            columns: ["crop_id"]
+            isOneToOne: false
+            referencedRelation: "crops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blockchain_records: {
+        Row: {
+          batch_id: string
+          block_number: number | null
+          created_at: string
+          data_hash: string
+          id: string
+          timestamp: string
+          transaction_hash: string
+          verified: boolean
+        }
+        Insert: {
+          batch_id: string
+          block_number?: number | null
+          created_at?: string
+          data_hash: string
+          id?: string
+          timestamp?: string
+          transaction_hash: string
+          verified?: boolean
+        }
+        Update: {
+          batch_id?: string
+          block_number?: number | null
+          created_at?: string
+          data_hash?: string
+          id?: string
+          timestamp?: string
+          transaction_hash?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blockchain_records_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crops: {
+        Row: {
+          certifications: string[] | null
+          created_at: string
+          description: string | null
+          farmer_id: string
+          harvest_date: string | null
+          id: string
+          location: string | null
+          name: string
+          predicted_price: number | null
+          price_per_unit: number
+          quantity: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          certifications?: string[] | null
+          created_at?: string
+          description?: string | null
+          farmer_id: string
+          harvest_date?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          predicted_price?: number | null
+          price_per_unit: number
+          quantity: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          certifications?: string[] | null
+          created_at?: string
+          description?: string | null
+          farmer_id?: string
+          harvest_date?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          predicted_price?: number | null
+          price_per_unit?: number
+          quantity?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crops_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -91,6 +205,64 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      transactions: {
+        Row: {
+          batch_id: string
+          buyer_id: string
+          created_at: string
+          id: string
+          quantity: number
+          seller_id: string
+          status: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          buyer_id: string
+          created_at?: string
+          id?: string
+          quantity: number
+          seller_id: string
+          status?: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          buyer_id?: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          seller_id?: string
+          status?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "transactions_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
     }
     Views: {

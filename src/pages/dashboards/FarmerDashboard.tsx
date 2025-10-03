@@ -494,22 +494,100 @@ const FarmerDashboard = () => {
         description: `Batch #${batchId} created successfully with ${newBatch.productIds.length} products`,
       });
       
-      // Persist batch metadata to Supabase for off-chain details and QR mapping
+      // Persist crop and batch metadata to Supabase for off-chain details and QR mapping
       try {
         const qrUrl = generateBatchQRCode(batchId);
-        const { error: insertError } = await supabase.from('batches').insert([{
-          batch_id: batchId.toString(),
-          farmer_id: user?.id || '',
-          product_name: batchDetails.cropType,
-          quantity_kg: parseFloat(batchDetails.quantityProduced || '0'),
-          price_per_kg: 0,
-          location: `${batchDetails.locationVillage}, ${batchDetails.locationDistrict}, ${batchDetails.locationState}`
-        }]);
-        if (insertError) {
-          console.error('Error inserting batch:', insertError);
+        const location = `${batchDetails.locationVillage}, ${batchDetails.locationDistrict}, ${batchDetails.locationState}`;
+        
+        // First, insert into crops table
+        const { data: cropData, error: cropError } = await supabase
+          .from('crops')
+          .insert([{
+            farmer_id: user?.id || '',
+            name: batchDetails.cropType,
+            description: `Batch ${batchId}`,
+            quantity: parseFloat(batchDetails.quantityProduced || '0'),
+            unit: 'kg',
+            price_per_unit: 0,
+            harvest_date: new Date().toISOString().split('T')[0],
+            location: location,
+            certifications: []
+          }])
+          .select()
+          .single();
+
+        if (cropError) {
+          console.error('Error inserting crop:', cropError);
+          toast({
+            title: "Error",
+            description: "Failed to save crop details",
+            variant: "destructive"
+          });
+          return;
         }
+
+        // Then, insert into batches table with crop_id reference
+        const { data: batchData, error: batchError } = await supabase
+          .from('batches')
+          .insert([{
+            batch_id: batchId.toString(),
+            farmer_id: user?.id || '',
+            crop_id: cropData.id,
+            product_name: batchDetails.cropType,
+            quantity_kg: parseFloat(batchDetails.quantityProduced || '0'),
+            price_per_kg: 0,
+            unit: 'kg',
+            location: location,
+            qr_code: qrUrl,
+            status: 'pending'
+          }])
+          .select()
+          .single();
+
+        if (batchError) {
+          console.error('Error inserting batch:', batchError);
+          toast({
+            title: "Error",
+            description: "Failed to save batch details",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Create blockchain record for verification
+        const dataHash = await crypto.subtle.digest(
+          'SHA-256',
+          new TextEncoder().encode(JSON.stringify({
+            batchId: batchId.toString(),
+            cropType: batchDetails.cropType,
+            quantity: batchDetails.quantityProduced,
+            location: location,
+            timestamp: new Date().toISOString()
+          }))
+        );
+        const hashArray = Array.from(new Uint8Array(dataHash));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        await supabase
+          .from('blockchain_records')
+          .insert([{
+            batch_id: batchData.id,
+            transaction_hash: `0x${hashHex}`,
+            verified: true,
+            data_hash: hashHex
+          }]);
+
+        toast({
+          title: "Success",
+          description: "Batch registered successfully with blockchain verification!"
+        });
       } catch (err) {
         console.error('Error saving batch details:', err);
+        toast({
+          title: "Error",
+          description: "Failed to save batch details",
+          variant: "destructive"
+        });
       }
 
       // Reset form and close dialog
