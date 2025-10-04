@@ -123,14 +123,11 @@ const FarmerDashboard = () => {
     try {
       setIsLoading(true);
       
-      // Only initialize blockchain if MetaMask is available
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          // Start blockchain event listeners to get real-time updates
-          await blockchainService.startEventListeners();
-          
-          // Listen for new products and batches
-          blockchainService.on('ProductCreated', async (event) => {
+      // Start blockchain event listeners to get real-time updates
+      await blockchainService.startEventListeners();
+      
+      // Listen for new products and batches
+      blockchainService.on('ProductCreated', async (event) => {
         if (event.data.farmer.toLowerCase() === account.toLowerCase()) {
           try {
             const product = await getProduct(event.data.productId);
@@ -169,19 +166,9 @@ const FarmerDashboard = () => {
         }
       });
 
-          // Load existing products and batches
-          await loadExistingProducts(account);
-          await loadExistingBatches(account);
-        } catch (blockchainError) {
-          console.warn('Blockchain features unavailable:', blockchainError);
-          toast({
-            title: 'Using Supabase Mode',
-            description: 'Blockchain features are unavailable. Using database-only mode.',
-          });
-        }
-      } else {
-        console.log('MetaMask not detected - using Supabase only mode');
-      }
+      // Load existing products and batches
+      await loadExistingProducts(account);
+      await loadExistingBatches(account);
       
     } catch (error) {
       console.error('Error loading farm data:', error);
@@ -257,15 +244,6 @@ const FarmerDashboard = () => {
   };
 
   const handleConnectWallet = async () => {
-    if (typeof window.ethereum === 'undefined') {
-      toast({
-        title: 'MetaMask Not Installed',
-        description: 'Please install MetaMask browser extension to use blockchain features, or use Supabase mode instead.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     try {
       setIsLoading(true);
       const address = await connectWallet();
@@ -286,7 +264,7 @@ const FarmerDashboard = () => {
       
       toast({
         title: 'Could not connect MetaMask',
-        description: error.message || 'Make sure MetaMask is installed, unlocked, and you approved the connection request.',
+        description: error.message || 'Check that MetaMask is installed, unlocked, and you approved the request.',
         variant: 'destructive',
       });
     } finally {
