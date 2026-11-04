@@ -415,7 +415,7 @@ class BlockchainService {
   }
 
   // Subscribe to specific event types
-  public on(eventType: BlockchainEventType, callback: EventCallback): () => void {
+  public on(eventType: BlockchainEventType | '*', callback: EventCallback): () => void {
     if (!this.eventListeners[eventType]) {
       this.eventListeners[eventType] = [];
     }
@@ -423,6 +423,20 @@ class BlockchainService {
     return () => {
       this.eventListeners[eventType] = this.eventListeners[eventType].filter(cb => cb !== callback);
     };
+  }
+
+  // Public method to get product count
+  public async getProductCount(): Promise<number> {
+    const contract = await this.getContract();
+    const count = await contract.productCount();
+    return Number(count);
+  }
+
+  // Public method to get batch count
+  public async getBatchCount(): Promise<number> {
+    const contract = await this.getContract();
+    const count = await contract.batchCount();
+    return Number(count);
   }
 
   // Get event history
@@ -531,16 +545,6 @@ class BlockchainService {
     }).find(parsed => parsed?.name === 'ProductCreated');
     if (!event) throw new Error('Product transaction confirmed without a ProductCreated event.');
     return Number(event.args.productId);
-  }
-
-  async getBatchCount(): Promise<number> {
-    const contract = await this.getContract();
-    const count = await (contract as any).batchCount?.();
-    // Support alternate naming if ABI differs
-    const value = typeof count === 'undefined' ? await (contract as any).getBatchCount?.() : count;
-    const n = Number(value);
-    if (!Number.isFinite(n)) throw new Error('Invalid batchCount response');
-    return n;
   }
 
   async createBatch(productIds: number[], location: string): Promise<number> {

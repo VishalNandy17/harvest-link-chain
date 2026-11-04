@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { blockchainService, type BlockchainEvent, type BlockchainEventType } from '@/lib/blockchain-updated';
+import { blockchainService, type BlockchainEvent, type BlockchainEventType } from '@/lib/blockchain';
 
 /**
  * Hook to subscribe to blockchain events

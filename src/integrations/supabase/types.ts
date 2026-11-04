@@ -16,39 +16,48 @@ export type Database = {
     Tables: {
       batches: {
         Row: {
-          batch_number: string
+          batch_id: string
           created_at: string
-          crop_id: string
+          crop_id: string | null
+          farmer_id: string
           id: string
-          price_per_unit: number
-          qr_code: string
-          quantity: number
+          location: string | null
+          price_per_kg: number
+          product_name: string
+          qr_code: string | null
+          quantity_kg: number
           status: string
-          unit: string
+          unit: string | null
           updated_at: string
         }
         Insert: {
-          batch_number: string
+          batch_id: string
           created_at?: string
-          crop_id: string
+          crop_id?: string | null
+          farmer_id: string
           id?: string
-          price_per_unit: number
-          qr_code: string
-          quantity: number
+          location?: string | null
+          price_per_kg: number
+          product_name: string
+          qr_code?: string | null
+          quantity_kg: number
           status?: string
-          unit?: string
+          unit?: string | null
           updated_at?: string
         }
         Update: {
-          batch_number?: string
+          batch_id?: string
           created_at?: string
-          crop_id?: string
+          crop_id?: string | null
+          farmer_id?: string
           id?: string
-          price_per_unit?: number
-          qr_code?: string
-          quantity?: number
+          location?: string | null
+          price_per_kg?: number
+          product_name?: string
+          qr_code?: string | null
+          quantity_kg?: number
           status?: string
-          unit?: string
+          unit?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -63,36 +72,33 @@ export type Database = {
       }
       blockchain_records: {
         Row: {
-          batch_id: string | null
-          data: Json
-          hash: string
+          batch_id: string
+          block_number: number | null
+          created_at: string
+          data_hash: string
           id: string
-          previous_hash: string | null
-          record_type: string
           timestamp: string
-          transaction_id: string | null
+          transaction_hash: string
           verified: boolean
         }
         Insert: {
-          batch_id?: string | null
-          data: Json
-          hash: string
+          batch_id: string
+          block_number?: number | null
+          created_at?: string
+          data_hash: string
           id?: string
-          previous_hash?: string | null
-          record_type: string
           timestamp?: string
-          transaction_id?: string | null
+          transaction_hash: string
           verified?: boolean
         }
         Update: {
-          batch_id?: string | null
-          data?: Json
-          hash?: string
+          batch_id?: string
+          block_number?: number | null
+          created_at?: string
+          data_hash?: string
           id?: string
-          previous_hash?: string | null
-          record_type?: string
           timestamp?: string
-          transaction_id?: string | null
+          transaction_hash?: string
           verified?: boolean
         }
         Relationships: [
@@ -101,13 +107,6 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "blockchain_records_transaction_id_fkey"
-            columns: ["transaction_id"]
-            isOneToOne: false
-            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -125,7 +124,6 @@ export type Database = {
           predicted_price: number | null
           price_per_unit: number
           quantity: number
-          status: string
           unit: string
           updated_at: string
         }
@@ -141,7 +139,6 @@ export type Database = {
           predicted_price?: number | null
           price_per_unit: number
           quantity: number
-          status?: string
           unit?: string
           updated_at?: string
         }
@@ -157,7 +154,6 @@ export type Database = {
           predicted_price?: number | null
           price_per_unit?: number
           quantity?: number
-          status?: string
           unit?: string
           updated_at?: string
         }
@@ -167,42 +163,9 @@ export type Database = {
             columns: ["farmer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
         ]
-      }
-      price_predictions: {
-        Row: {
-          confidence_score: number
-          created_at: string
-          crop_name: string
-          current_price: number
-          factors: Json | null
-          id: string
-          predicted_price: number
-          valid_until: string
-        }
-        Insert: {
-          confidence_score: number
-          created_at?: string
-          crop_name: string
-          current_price: number
-          factors?: Json | null
-          id?: string
-          predicted_price: number
-          valid_until: string
-        }
-        Update: {
-          confidence_score?: number
-          created_at?: string
-          crop_name?: string
-          current_price?: number
-          factors?: Json | null
-          id?: string
-          predicted_price?: number
-          valid_until?: string
-        }
-        Relationships: []
       }
       profiles: {
         Row: {
@@ -213,7 +176,7 @@ export type Database = {
           id: string
           last_name: string
           phone: string | null
-          role: string
+          role: Database["public"]["Enums"]["user_role"]
           updated_at: string
           user_id: string
         }
@@ -225,7 +188,7 @@ export type Database = {
           id?: string
           last_name: string
           phone?: string | null
-          role: string
+          role: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           user_id: string
         }
@@ -237,7 +200,7 @@ export type Database = {
           id?: string
           last_name?: string
           phone?: string | null
-          role?: string
+          role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           user_id?: string
         }
@@ -253,7 +216,6 @@ export type Database = {
           seller_id: string
           status: string
           total_price: number
-          transaction_hash: string | null
           updated_at: string
         }
         Insert: {
@@ -265,7 +227,6 @@ export type Database = {
           seller_id: string
           status?: string
           total_price: number
-          transaction_hash?: string | null
           updated_at?: string
         }
         Update: {
@@ -277,7 +238,6 @@ export type Database = {
           seller_id?: string
           status?: string
           total_price?: number
-          transaction_hash?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -293,14 +253,14 @@ export type Database = {
             columns: ["buyer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "transactions_seller_id_fkey"
             columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -312,7 +272,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_role: "farmer" | "distributor" | "retailer" | "procurement" | "warehouse" | "transporter" | "auditor" | "consumer" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -439,6 +399,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["farmer", "distributor", "retailer", "procurement", "warehouse", "transporter", "auditor", "consumer", "admin"],
+    },
   },
 } as const

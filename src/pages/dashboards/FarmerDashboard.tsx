@@ -17,12 +17,12 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Tractor, TrendingUp, QrCode, Leaf, BarChart3, DollarSign, Clock, AlertCircle, Plus, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import { 
-  createBatch, 
-  getProduct, 
-  getBatch, 
-  getProductStatus, 
-  connectWallet, 
+import {
+  createBatch,
+  getProduct,
+  getBatch,
+  getProductStatus,
+  connectWallet,
   getCurrentAccount,
   generateProductQRCode,
   generateBatchQRCode,
@@ -89,7 +89,7 @@ const FarmerDashboard = () => {
   const [qrType, setQrType] = useState<'product' | 'batch'>('product');
   const { registerCrop, getPricePrediction } = useBlockchain();
   const [isStorageChoiceOpen, setIsStorageChoiceOpen] = useState(false);
-  
+
   // Ensure this dashboard is only accessible to farmers
   useEffect(() => {
     if (!loading && userRole !== UserRole.FARMER && userRole !== UserRole.ADMIN) {
@@ -120,10 +120,10 @@ const FarmerDashboard = () => {
   const loadFarmData = async (account: string) => {
     try {
       setIsLoading(true);
-      
+
       // Start blockchain event listeners to get real-time updates
       await blockchainService.startEventListeners();
-      
+
       // Listen for new products and batches
       blockchainService.on('ProductCreated', async (event) => {
         if (event.data.farmer.toLowerCase() === account.toLowerCase()) {
@@ -145,7 +145,7 @@ const FarmerDashboard = () => {
           try {
             const batch = await getBatch(event.data.batchId);
             setBatches(prev => [batch, ...prev]);
-            
+
             // Automatically generate QR code for new batch
             const qrData = generateBatchQRCode(batch.id);
             setCurrentQRData(qrData);
@@ -153,7 +153,7 @@ const FarmerDashboard = () => {
             const qrCodeUrl = await generateQRCodeDataURL(qrData);
             setCurrentQRCode(qrCodeUrl);
             setIsQRDialogOpen(true);
-            
+
             toast({
               title: 'New Batch Created',
               description: `Batch #${batch.id} has been created with ${batch.productIds.length} products`,
@@ -167,7 +167,7 @@ const FarmerDashboard = () => {
       // Load existing products and batches
       await loadExistingProducts(account);
       await loadExistingBatches(account);
-      
+
     } catch (error) {
       console.error('Error loading farm data:', error);
       toast({
@@ -183,11 +183,10 @@ const FarmerDashboard = () => {
   const loadExistingProducts = async (account: string) => {
     try {
       // Get product count from contract
-      const contract = await blockchainService.getContract();
-      const productCount = await contract.productCount();
-      
+      const productCount = await blockchainService.getProductCount();
+
       const farmerProducts: Product[] = [];
-      
+
       // Check each product to see if it belongs to this farmer
       for (let i = 1; i <= productCount; i++) {
         try {
@@ -200,7 +199,7 @@ const FarmerDashboard = () => {
           continue;
         }
       }
-      
+
       setProducts(farmerProducts);
     } catch (error) {
       console.error('Error loading existing products:', error);
@@ -210,11 +209,10 @@ const FarmerDashboard = () => {
   const loadExistingBatches = async (account: string) => {
     try {
       // Get batch count from contract
-      const contract = await blockchainService.getContract();
-      const batchCount = await contract.batchCount();
-      
+      const batchCount = await blockchainService.getBatchCount();
+
       const farmerBatches: Batch[] = [];
-      
+
       // Check each batch to see if it belongs to this farmer
       for (let i = 1; i <= batchCount; i++) {
         try {
@@ -223,11 +221,11 @@ const FarmerDashboard = () => {
           const batchProducts = await Promise.all(
             batch.productIds.map(id => getProduct(id).catch(() => null))
           );
-          
-          const hasFarmerProducts = batchProducts.some(product => 
+
+          const hasFarmerProducts = batchProducts.some(product =>
             product && product.farmer.toLowerCase() === account.toLowerCase()
           );
-          
+
           if (hasFarmerProducts) {
             farmerBatches.push(batch);
           }
@@ -236,7 +234,7 @@ const FarmerDashboard = () => {
           continue;
         }
       }
-      
+
       setBatches(farmerBatches);
     } catch (error) {
       console.error('Error loading existing batches:', error);
@@ -249,19 +247,19 @@ const FarmerDashboard = () => {
       const address = await connectWallet();
       setWalletConnected(true);
       setWalletAddress(address);
-      
+
       toast({
         title: 'MetaMask Connected',
         description: `Wallet connected successfully! Address: ${address.slice(0, 6)}...${address.slice(-4)}`,
       });
-      
+
       // Load farm data after successful connection
       await loadFarmData(address);
     } catch (error: any) {
       console.error('Error connecting wallet:', error);
       setWalletConnected(false);
       setWalletAddress('');
-      
+
       toast({
         title: 'Could not connect MetaMask',
         description: error.message || 'Check that MetaMask is installed, unlocked, and you approved the request.',
@@ -346,7 +344,7 @@ const FarmerDashboard = () => {
             crop: cropPayload.name,
             quantity: `${cropPayload.quantity} ${cropPayload.unit}`,
             date: new Date().toLocaleDateString(),
-            price: `₹${cropPayload.pricePerUnit}`,
+            price: `â‚¹${cropPayload.pricePerUnit}`,
             status: 'Listed',
             qr
           },
@@ -355,7 +353,7 @@ const FarmerDashboard = () => {
       }
       toast({
         title: 'Lot confirmed on Ethereum',
-        description: `Ethereum transaction ${String(resp.chain.transactionHash).slice(0, 12)}… confirmed.`,
+        description: `Ethereum transaction ${String(resp.chain.transactionHash).slice(0, 12)}â€¦ confirmed.`,
       });
       setNewProduct({ name: '', description: '', imageHash: '', price: '', quantityKg: '', mspPerKg: '', farmerWallet: '', region: '' });
       setIsProductDialogOpen(false);
@@ -401,18 +399,18 @@ const FarmerDashboard = () => {
 
     try {
       setIsCreatingBatch(true);
-      
+
       // Create batch on blockchain
       const batchId = await createBatch(
         newBatch.productIds,
         newBatch.location
       );
-      
+
       toast({
         title: 'Success',
         description: `Batch #${batchId} created successfully with ${newBatch.productIds.length} products`,
       });
-      
+
       // Reset form and close dialog
       setNewBatch({
         productIds: [],
@@ -436,9 +434,9 @@ const FarmerDashboard = () => {
       });
       setSelectedProducts([]);
       setIsBatchDialogOpen(false);
-      
+
       // The batch will be automatically added via event listener with QR code generation
-      
+
     } catch (error) {
       console.error('Error creating batch:', error);
       toast({
@@ -452,7 +450,7 @@ const FarmerDashboard = () => {
   };
 
   const toggleProductSelection = (productId: number) => {
-    setSelectedProducts(prev => 
+    setSelectedProducts(prev =>
       prev.includes(productId)
         ? prev.filter(id => id !== productId)
         : [...prev, productId]
@@ -464,22 +462,28 @@ const FarmerDashboard = () => {
     const totalValue = products.reduce((sum, product) => {
       return sum + convertETHToINR(product.price);
     }, 0);
-    
+
     const soldProducts = products.filter(product => product.status >= 4); // Sold or higher
     const pendingProducts = products.filter(product => product.status < 4);
-    
+
     const soldValue = soldProducts.reduce((sum, product) => {
       return sum + convertETHToINR(product.price);
     }, 0);
-    
+
     const pendingValue = pendingProducts.reduce((sum, product) => {
       return sum + convertETHToINR(product.price);
     }, 0);
-    
+
+    // Calculate monthly earnings (mock for now - in real app, filter by date)
+    const thisMonthValue = soldValue * 0.6; // Mock: assume 60% of sales this month
+    const lastMonthValue = soldValue * 0.4; // Mock: assume 40% of sales last month
+
     return {
-      total: `₹${totalValue.toLocaleString()}`,
-      pending: `₹${pendingValue.toLocaleString()}`,
-      sold: `₹${soldValue.toLocaleString()}`,
+      total: `â‚¹${totalValue.toLocaleString()}`,
+      pending: `â‚¹${pendingValue.toLocaleString()}`,
+      sold: `â‚¹${soldValue.toLocaleString()}`,
+      thisMonth: `â‚¹${thisMonthValue.toLocaleString()}`,
+      lastMonth: `â‚¹${lastMonthValue.toLocaleString()}`,
       activeListings: products.length
     };
   };
@@ -499,17 +503,17 @@ const FarmerDashboard = () => {
     quantity: '1 unit', // Could be enhanced with actual quantity data
     date: new Date(product.createdAt * 1000).toLocaleDateString(),
     status: getProductStatus(product.status),
-    price: `₹${convertETHToINR(product.price).toLocaleString()}`,
+    price: `â‚¹${convertETHToINR(product.price).toLocaleString()}`,
     verified: true,
     blockchainId: product.id
   }));
 
   const generateQRCode = async (produceId: number, type: 'product' | 'batch' = 'product') => {
     try {
-      const qrData = type === 'product' 
+      const qrData = type === 'product'
         ? generateProductQRCode(produceId)
         : generateBatchQRCode(produceId);
-      
+
       setCurrentQRData(qrData);
       setQrType(type);
       const qrCodeUrl = await generateQRCodeDataURL(qrData);
@@ -547,7 +551,7 @@ const FarmerDashboard = () => {
           </div>
           <div className="flex flex-col md:flex-row gap-4 mt-4 md:mt-0">
             {!walletConnected ? (
-              <Button 
+              <Button
                 onClick={handleConnectWallet}
                 disabled={isLoading}
                 className="bg-blue-600 hover:bg-blue-700"
@@ -584,7 +588,7 @@ const FarmerDashboard = () => {
               <div className="text-sm text-blue-800/90">
                 Ensure MetaMask is installed in your browser. You must have the Farmer role to proceed.
               </div>
-              <Button 
+              <Button
                 onClick={handleConnectWallet}
                 disabled={isLoading}
                 className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
@@ -656,7 +660,7 @@ const FarmerDashboard = () => {
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
             <TabsTrigger value="advisory">Crop Advisory</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="listings" className="space-y-4">
             <Card>
               <CardHeader>
@@ -685,8 +689,8 @@ const FarmerDashboard = () => {
                           <td className="py-3 px-2">{item.date}</td>
                           <td className="py-3 px-2">{item.price}</td>
                           <td className="py-3 px-2">
-                            <Badge 
-                              variant="outline" 
+                            <Badge
+                              variant="outline"
                               className={cn(
                                 item.status === 'Listed' && 'border-blue-500 text-blue-500',
                                 item.status === 'Sold' && 'border-green-500 text-green-500',
@@ -697,9 +701,9 @@ const FarmerDashboard = () => {
                             </Badge>
                           </td>
                           <td className="py-3 px-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={async () => {
                                 setQrType('batch');
                                 setCurrentQRData(item.qr);
@@ -721,8 +725,8 @@ const FarmerDashboard = () => {
                           <td className="py-3 px-2">{item.date}</td>
                           <td className="py-3 px-2">{item.price}</td>
                           <td className="py-3 px-2">
-                            <Badge 
-                              variant="outline" 
+                            <Badge
+                              variant="outline"
                               className={cn(
                                 item.status === 'Listed' && 'border-blue-500 text-blue-500',
                                 item.status === 'Sold' && 'border-green-500 text-green-500',
@@ -733,9 +737,9 @@ const FarmerDashboard = () => {
                             </Badge>
                           </td>
                           <td className="py-3 px-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => generateQRCode(item.id)}
                               className="mr-2"
                             >
@@ -750,7 +754,7 @@ const FarmerDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="batches" className="space-y-4">
             <Card>
               <CardHeader>
@@ -762,7 +766,7 @@ const FarmerDashboard = () => {
                   <p className="text-sm text-muted-foreground">
                     {batches.length} batches created
                   </p>
-                  <Button 
+                  <Button
                     onClick={() => setIsBatchDialogOpen(true)}
                     disabled={products.length === 0}
                     className="bg-green-600 hover:bg-green-700"
@@ -771,13 +775,13 @@ const FarmerDashboard = () => {
                     Create New Batch
                   </Button>
                 </div>
-                
+
                 {batches.length === 0 && offchainBatches.length === 0 ? (
                   <div className="text-center py-8">
                     <Tractor className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No batches yet</h3>
                     <p className="text-gray-500 mb-4">Create your first batch to start selling products</p>
-                    <Button 
+                    <Button
                       onClick={() => setIsBatchDialogOpen(true)}
                       disabled={products.length === 0}
                       className="bg-green-600 hover:bg-green-700"
@@ -795,15 +799,15 @@ const FarmerDashboard = () => {
                           <div>
                             <h3 className="font-medium">Batch #{batch.id}</h3>
                             <p className="text-sm text-muted-foreground">
-                              {batch.productCount} products • Created {new Date(batch.createdAt).toLocaleDateString()}
+                              {batch.productCount} products â€¢ Created {new Date(batch.createdAt).toLocaleDateString()}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               Location: {batch.location}
                             </p>
                           </div>
                           <div className="flex space-x-2">
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={async () => {
                                 setQrType('batch');
@@ -826,15 +830,15 @@ const FarmerDashboard = () => {
                           <div>
                             <h3 className="font-medium">Batch #{batch.id}</h3>
                             <p className="text-sm text-muted-foreground">
-                              {batch.productIds.length} products • Created {new Date(batch.createdAt * 1000).toLocaleDateString()}
+                              {batch.productIds.length} products â€¢ Created {new Date(batch.createdAt * 1000).toLocaleDateString()}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               Location: {batch.location}
                             </p>
                           </div>
                           <div className="flex space-x-2">
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={() => generateQRCode(batch.id, 'batch')}
                             >
@@ -854,7 +858,7 @@ const FarmerDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="add">
             <Card>
               <CardHeader>
@@ -866,7 +870,7 @@ const FarmerDashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="product-name">Product Name *</Label>
-                      <Input 
+                      <Input
                         id="product-name"
                         value={newProduct.name}
                         onChange={(e) => setNewProduct(prev => ({ ...prev, name: e.target.value }))}
@@ -874,10 +878,10 @@ const FarmerDashboard = () => {
                         required
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="product-description">Description *</Label>
-                      <Textarea 
+                      <Textarea
                         id="product-description"
                         value={newProduct.description}
                         onChange={(e) => setNewProduct(prev => ({ ...prev, description: e.target.value }))}
@@ -885,14 +889,14 @@ const FarmerDashboard = () => {
                         required
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="product-price">Price (INR) *</Label>
                       <div className="flex">
                         <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground">
-                          ₹
+                          â‚¹
                         </span>
-                        <Input 
+                        <Input
                           id="product-price"
                           type="number"
                           step="1"
@@ -907,10 +911,10 @@ const FarmerDashboard = () => {
                         Price will be converted to ETH automatically for blockchain storage
                       </p>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="quantity-kg">Quantity (kg) *</Label>
-                      <Input 
+                      <Input
                         id="quantity-kg"
                         type="number"
                         step="0.01"
@@ -923,7 +927,7 @@ const FarmerDashboard = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="msp">MSP (per kg) *</Label>
-                      <Input 
+                      <Input
                         id="msp"
                         type="number"
                         step="0.01"
@@ -936,7 +940,7 @@ const FarmerDashboard = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="farmer-wallet">Farmer Wallet Address</Label>
-                      <Input 
+                      <Input
                         id="farmer-wallet"
                         value={newProduct.farmerWallet}
                         onChange={(e) => setNewProduct(prev => ({ ...prev, farmerWallet: e.target.value }))}
@@ -946,17 +950,17 @@ const FarmerDashboard = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="region">Location / Region</Label>
-                      <Input 
+                      <Input
                         id="region"
                         value={newProduct.region}
                         onChange={(e) => setNewProduct(prev => ({ ...prev, region: e.target.value }))}
                         placeholder="Village, District, State"
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="image-hash">Image Hash (IPFS)</Label>
-                      <Input 
+                      <Input
                         id="image-hash"
                         value={newProduct.imageHash}
                         onChange={(e) => setNewProduct(prev => ({ ...prev, imageHash: e.target.value }))}
@@ -964,10 +968,10 @@ const FarmerDashboard = () => {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="pt-4">
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="bg-green-600 hover:bg-green-700 w-full md:w-auto"
                       disabled={isCreatingProduct || !walletConnected}
                     >
@@ -988,7 +992,7 @@ const FarmerDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="earnings">
             <Card>
               <CardHeader>
@@ -1019,7 +1023,7 @@ const FarmerDashboard = () => {
                       </div>
                     </CardContent>
                   </Card>
-                  
+
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-lg">Transaction History</CardTitle>
@@ -1032,7 +1036,7 @@ const FarmerDashboard = () => {
                             <div className="text-sm text-muted-foreground">To: Agri Distributors</div>
                           </div>
                           <div className="text-right">
-                            <div className="font-medium text-green-600">+₹15,000</div>
+                            <div className="font-medium text-green-600">+â‚¹15,000</div>
                             <div className="text-sm text-muted-foreground">Oct 15, 2023</div>
                           </div>
                         </div>
@@ -1042,7 +1046,7 @@ const FarmerDashboard = () => {
                             <div className="text-sm text-muted-foreground">To: FoodChain Inc.</div>
                           </div>
                           <div className="text-right">
-                            <div className="font-medium text-green-600">+₹10,500</div>
+                            <div className="font-medium text-green-600">+â‚¹10,500</div>
                             <div className="text-sm text-muted-foreground">Oct 10, 2023</div>
                           </div>
                         </div>
@@ -1052,7 +1056,7 @@ const FarmerDashboard = () => {
                             <div className="text-sm text-muted-foreground">To: Fresh Markets</div>
                           </div>
                           <div className="text-right">
-                            <div className="font-medium text-orange-500">Pending ₹1,500</div>
+                            <div className="font-medium text-orange-500">Pending â‚¹1,500</div>
                             <div className="text-sm text-muted-foreground">Oct 5, 2023</div>
                           </div>
                         </div>
@@ -1066,7 +1070,7 @@ const FarmerDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="advisory">
             <Card>
               <CardHeader>
@@ -1096,7 +1100,7 @@ const FarmerDashboard = () => {
                       </Card>
                     ))}
                   </div>
-                  
+
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-lg">Market Price Forecast</CardTitle>
@@ -1106,28 +1110,28 @@ const FarmerDashboard = () => {
                         <div className="flex justify-between items-center">
                           <div className="font-medium">Wheat</div>
                           <div className="flex items-center">
-                            <span className="font-medium mr-2">₹22/kg</span>
+                            <span className="font-medium mr-2">â‚¹22/kg</span>
                             <Badge className="bg-green-500">+10%</Badge>
                           </div>
                         </div>
                         <div className="flex justify-between items-center">
                           <div className="font-medium">Rice</div>
                           <div className="flex items-center">
-                            <span className="font-medium mr-2">₹38/kg</span>
+                            <span className="font-medium mr-2">â‚¹38/kg</span>
                             <Badge className="bg-green-500">+8%</Badge>
                           </div>
                         </div>
                         <div className="flex justify-between items-center">
                           <div className="font-medium">Tomatoes</div>
                           <div className="flex items-center">
-                            <span className="font-medium mr-2">₹12/kg</span>
+                            <span className="font-medium mr-2">â‚¹12/kg</span>
                             <Badge className="bg-red-500">-5%</Badge>
                           </div>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                  
+
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-lg">Weather Impact</CardTitle>
@@ -1148,7 +1152,7 @@ const FarmerDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
-      
+
       <QRCodeGenerator
         data={currentQRData}
         title={`${qrType === 'product' ? 'Product' : 'Batch'} QR Code`}
@@ -1167,7 +1171,7 @@ const FarmerDashboard = () => {
             </DialogDescription>
           </DialogHeader>
           <Button onClick={registerCropOnEthereum} disabled={isCreatingProduct} className="w-full">
-            {isCreatingProduct ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Waiting for Ethereum confirmation…</> : 'Submit Ethereum transaction'}
+            {isCreatingProduct ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Waiting for Ethereum confirmationâ€¦</> : 'Submit Ethereum transaction'}
           </Button>
         </DialogContent>
       </Dialog>
@@ -1184,7 +1188,7 @@ const FarmerDashboard = () => {
           <div className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="batch-location">Batch Location *</Label>
-              <Input 
+              <Input
                 id="batch-location"
                 value={newBatch.location}
                 onChange={(e) => setNewBatch(prev => ({ ...prev, location: e.target.value }))}
@@ -1262,7 +1266,7 @@ const FarmerDashboard = () => {
               <Label htmlFor="certification">Certification Info</Label>
               <Input id="certification" value={batchDetails.certificationInfo} onChange={(e) => setBatchDetails(prev => ({ ...prev, certificationInfo: e.target.value }))} placeholder="e.g., Organic, FSSAI" />
             </div>
-            
+
             <div className="space-y-2">
               <Label>Select Products</Label>
               {products.length === 0 ? (
@@ -1279,14 +1283,14 @@ const FarmerDashboard = () => {
                         className="rounded"
                       />
                       <label htmlFor={`product-${product.id}`} className="text-sm">
-                        {product.name} - ₹{convertETHToINR(product.price).toLocaleString()}
+                        {product.name} - â‚¹{convertETHToINR(product.price).toLocaleString()}
                       </label>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-            
+
             {selectedProducts.length > 0 && (
               <div className="p-3 bg-muted rounded-lg">
                 <p className="text-sm font-medium">Selected Products:</p>
@@ -1297,13 +1301,13 @@ const FarmerDashboard = () => {
             )}
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsBatchDialogOpen(false)}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleCreateBatch}
               disabled={isCreatingBatch || selectedProducts.length === 0 || !newBatch.location}
               className="bg-green-600 hover:bg-green-700"
