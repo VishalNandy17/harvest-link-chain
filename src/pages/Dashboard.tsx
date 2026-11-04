@@ -23,6 +23,12 @@ const Dashboard = () => {
           case UserRole.RETAILER:
             navigate("/dashboards/retailer", { replace: true });
             break;
+          case UserRole.PROCUREMENT:
+          case UserRole.WAREHOUSE:
+          case UserRole.TRANSPORTER:
+          case UserRole.AUDITOR:
+            navigate("/pds", { replace: true });
+            break;
           case UserRole.CONSUMER:
             navigate("/dashboards/consumer", { replace: true });
             break;

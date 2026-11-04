@@ -20,7 +20,8 @@ import {
   updateBatchLocation,
   generateBatchQRCode,
   generateQRCodeDataURL,
-  parseQRCodeData
+  parseQRCodeData,
+  getBatch
 } from '@/lib/blockchain';
 import { QRCodeGenerator } from '@/components/QRCodeGenerator';
 import { toast } from '@/components/ui/use-toast';
@@ -71,20 +72,21 @@ const DistributorDashboard = () => {
   useEffect(() => {
     if (!loading && userRole !== UserRole.DISTRIBUTOR && userRole !== UserRole.ADMIN) {
       navigate('/', { replace: true });
-    } else if (!loading) {
-      checkWalletConnection();
-      loadBatches();
-      // Mock data for now
-      setAvailableProduce([
-        { id: 1, crop: 'Wheat', farmer: 'Ramesh Kumar', quantity: '500 kg', harvestDate: '2023-10-15', quality: 'Premium', price: '₹20/kg', verified: true },
-        { id: 2, crop: 'Rice', farmer: 'Suresh Patel', quantity: '300 kg', harvestDate: '2023-10-10', quality: 'Standard', price: '₹35/kg', verified: true },
-        { id: 3, crop: 'Tomatoes', farmer: 'Mahesh Singh', quantity: '100 kg', harvestDate: '2023-10-05', quality: 'Premium', price: '₹15/kg', verified: false },
-      ]);
-      setProcuredProduce([
-        { id: 101, crop: 'Wheat', farmer: 'Dinesh Sharma', quantity: '800 kg', purchaseDate: '2023-09-25', status: 'In Storage', destination: 'Central Warehouse' },
-        { id: 102, crop: 'Potatoes', farmer: 'Rajesh Verma', quantity: '500 kg', purchaseDate: '2023-09-20', status: 'In Transit', destination: 'City Market' },
-      ]);
+      return;
     }
+    if (loading) return;
+
+    const init = async () => {
+      await checkWalletConnection();
+      await startRealtimeListeners();
+      await loadBatchesFromChain();
+    };
+
+    init();
+
+    return () => {
+      try { blockchainService.stopEventListeners(); } catch (_) {}
+    };
   }, [userRole, loading, navigate]);
 
   // Check wallet connection
@@ -119,34 +121,47 @@ const DistributorDashboard = () => {
     }
   };
 
-  // Load batches
-  const loadBatches = async () => {
+  // Load all batches from the blockchain (Sepolia/Hardhat via MetaMask)
+  const loadBatchesFromChain = async () => {
     try {
-      // In a real app, you would fetch batches from the blockchain
-      // For now, we'll use mock data
-      setBatches([
-        {
-          id: 1,
-          productIds: [1, 2, 3],
-          currentHandler: '0x123...',
-          createdAt: Date.now() / 1000 - 86400, // 1 day ago
-          location: 'Central Warehouse'
-        },
-        {
-          id: 2,
-          productIds: [4, 5],
-          currentHandler: '0x123...',
-          createdAt: Date.now() / 1000 - 172800, // 2 days ago
-          location: 'In Transit to Retailer'
-        }
-      ]);
+      setIsLoading(true);
+      const count = await (blockchainService as any).getBatchCount();
+      const list: Batch[] = [];
+      for (let i = 1; i <= Number(count); i++) {
+        try {
+          const b = await getBatch(i);
+          // Show only active/non-empty batches
+          if (Array.isArray(b.productIds) && b.productIds.length > 0) {
+            list.push(b);
+          }
+        } catch { /* skip holes */ }
+      }
+      setBatches(list);
     } catch (error) {
       console.error('Error loading batches:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load batches',
-        variant: 'destructive',
+      toast({ title: 'Error', description: 'Failed to load batches from chain', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Start realtime listeners for new batches and location updates
+  const startRealtimeListeners = async () => {
+    try {
+      await blockchainService.startEventListeners();
+      blockchainService.on('BatchCreated', async (event) => {
+        try {
+          const b = await getBatch(Number(event.data.batchId));
+          setBatches(prev => [b, ...prev.filter(x => x.id !== b.id)]);
+        } catch {}
       });
+      blockchainService.on('BatchLocationUpdated', async (event) => {
+        const id = Number(event.data.batchId);
+        const newLoc = String(event.data.newLocation);
+        setBatches(prev => prev.map(b => b.id === id ? { ...b, location: newLoc } as Batch : b));
+      });
+    } catch (e) {
+      console.error('Error starting listeners:', e);
     }
   };
 
@@ -270,9 +285,16 @@ const DistributorDashboard = () => {
             <h1 className="text-3xl font-bold text-blue-800">Distributor Dashboard</h1>
             <p className="text-gray-600">Welcome back, {profile?.first_name} {profile?.last_name}</p>
           </div>
-          <Button className="mt-4 md:mt-0 bg-blue-600 hover:bg-blue-700" onClick={scanQRCode}>
+          <div className="flex gap-3 mt-4 md:mt-0">
+            {!walletConnected && (
+              <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={connectWallet} disabled={isLoading}>
+                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Connecting...</> : 'Connect Wallet'}
+              </Button>
+            )}
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={scanQRCode}>
             <QrCode className="mr-2 h-4 w-4" /> Scan QR Code
-          </Button>
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

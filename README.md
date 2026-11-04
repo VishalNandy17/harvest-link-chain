@@ -1,73 +1,43 @@
-# Welcome to your Lovable project
+# HarvestLink: Ethereum PDS and food supply tracking
 
-## Project info
+HarvestLink records food lot registration, custody, stock receipt, allocation, and final distribution as transactions on a public EVM chain. Supabase provides account authentication and stores operational details; it is not treated as proof of chain activity. Public lot pages read Ethereum state and transaction events. Beneficiary identity and eligibility details must remain private and off chain.
 
-**URL**: https://lovable.dev/projects/a4883aad-770d-4622-9c42-c65be932fe24
+## Runtime flow
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/a4883aad-770d-4622-9c42-c65be932fe24) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```mermaid
+flowchart LR
+  Operator[Approved PDS operator] --> Web[React app]
+  Web --> Auth[Supabase Auth + role API]
+  Web --> Wallet[Wallet signature]
+  Wallet --> Contract[HarvestLink Solidity contract]
+  Contract --> Events[Public Ethereum events]
+  Web --> Ops[(Supabase operational records)]
+  QR[Public QR visitor] --> Lot[Public lot page]
+  Lot --> RPC[Configured read RPC]
+  RPC --> Contract
 ```
 
-**Edit a file directly in GitHub**
+## Local setup
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. Install dependencies: `npm install`.
+2. Copy `.env.example` to `.env`. Set the Vite Supabase variables expected by `src/integrations/supabase/client.ts`, and set `VITE_CHAIN_ID`, `VITE_CONTRACT_ADDRESS`, `VITE_RPC_URL`, `VITE_EXPLORER_URL`, `VITE_DEPLOYMENT_BLOCK`, and `VITE_PUBLIC_BASE_URL` after deployment.
+3. Compile and sync the Solidity artifact: `npm run chain:compile`.
+4. For a new test deployment, configure `DEPLOY_RPC_URL` and `DEPLOYER_PRIVATE_KEY`; optional `BOOTSTRAP_*_WALLETS` values grant operational roles. Run `npm run chain:deploy`. The script writes `deployments/<chainId>.json`; copy the deployment address, chain ID, and block into the frontend and Supabase configuration.
+5. Apply the migrations in `supabase/migrations/` to the configured Supabase project and deploy the functions under `supabase/functions/`.
+6. Set Edge Function secrets: `ETHEREUM_RPC_URL`, `ETHEREUM_CHAIN_ID`, `ETHEREUM_CONFIRMATIONS`, `HARVESTLINK_CONTRACT_ADDRESS`, `ETHEREUM_EXPLORER_URL`, and `PUBLIC_APP_URL`. These are server-side secrets/configuration, never `VITE_` variables.
+7. Start the UI with `npm run dev`.
 
-**Use GitHub Codespaces**
+New accounts have consumer access while their requested operational role awaits admin approval. Supabase role approval and the corresponding on-chain wallet role are separate steps. Contract administration should use a governed admin wallet, ideally a multisig for a real deployment. Never place a privileged private key in frontend configuration.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Implemented source workflows
 
-## What technologies are used for this project?
+- Crop/lot registration binds a verified wallet to the authenticated account, submits a wallet-signed Ethereum transaction, waits for confirmations, and independently checks the event before showing success.
+- Authorized operators can transfer custody, split lots, receive stock, allocate stock, issue a secret-backed entitlement, and record one-time distribution.
+- Public `/lot/:lotId` reads chain state and event history; QR verification rechecks Ethereum receipt and the canonical record commitment.
+- Contract roles, pause control, replay checks, lot recall, and role approval paths are included in source.
 
-This project is built with:
+The retailer dashboard still contains demonstration inventory and forecast data; use `/pds` for on-chain operations. The entitlement secret must be delivered privately and securely by the operator. Eligibility is not proven by the contract, and this prototype does not provide a zero-knowledge eligibility system.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Deployment and completion status
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/a4883aad-770d-4622-9c42-c65be932fe24) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+The source includes a compile/deploy workflow, but this repository does not establish that a contract has been deployed, that Supabase migrations/functions have been applied, or that a pilot is operating. Do not describe the system as deployed or production-ready until those external steps are completed. Production also requires contract security review, operational key governance, indexing/reorg recovery, monitoring, and a field-validated privacy and dispute process. Core source workflows are implemented; deployment and production assurance remain outstanding.

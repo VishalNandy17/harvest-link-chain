@@ -35,6 +35,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
         return <Navigate to="/dashboards/distributor" replace />
       case UserRole.RETAILER:
         return <Navigate to="/dashboards/retailer" replace />
+      case UserRole.PROCUREMENT:
+      case UserRole.WAREHOUSE:
+      case UserRole.TRANSPORTER:
+      case UserRole.AUDITOR:
+        return <Navigate to="/pds" replace />
       case UserRole.CONSUMER:
         return <Navigate to="/dashboards/consumer" replace />
       case UserRole.ADMIN:

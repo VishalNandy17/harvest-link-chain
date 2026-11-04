@@ -15,7 +15,6 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Package, TrendingUp, QrCode, BarChart3, DollarSign, ShieldCheck, Search, ShoppingCart, Truck, History } from 'lucide-react';
 import { 
-  purchaseBatch, 
   verifyProduct, 
   generateProductQRCode,
   generateQRCodeDataURL,
@@ -39,7 +38,6 @@ const RetailerDashboard = () => {
   }, [userRole, loading, navigate]);
   
   const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<any>(null);
   const [currentQRData, setCurrentQRData] = useState('');
@@ -118,17 +116,6 @@ const RetailerDashboard = () => {
     // In a real app, this would verify the blockchain record
   };
 
-  const initiatePayment = async (paymentId: number) => {
-    try {
-      // In a real app, this would call the purchaseBatch function
-      // For now, we'll simulate the payment
-      await purchaseBatch(paymentId, '1000000000000000000'); // 1 ETH in wei
-      setIsPaymentDialogOpen(true);
-    } catch (error) {
-      console.error('Error initiating payment:', error);
-    }
-  };
-
   const generateProductQR = async (productId: number) => {
     try {
       const qrData = generateProductQRCode(productId);
@@ -168,6 +155,7 @@ const RetailerDashboard = () => {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-green-800">Retailer Dashboard</h1>
             <p className="text-gray-600">Welcome back, {profile?.first_name} {profile?.last_name}</p>
+            <p className="mt-2 text-sm text-amber-800">Inventory, sales, forecast, and payment figures on this legacy dashboard are sample data. Record PDS activity in the Ethereum operations page.</p>
           </div>
           <Button className="mt-4 md:mt-0 w-full md:w-auto bg-green-600 hover:bg-green-700">
             <ShoppingCart className="mr-2 h-4 w-4" /> New Order
@@ -207,7 +195,7 @@ const RetailerDashboard = () => {
           </ResponsiveCard>
           <ResponsiveCard fullWidthOnMobile>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
+              <CardTitle className="text-sm font-medium">Demo payment figures</CardTitle>
               <DollarSign className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
@@ -221,7 +209,7 @@ const RetailerDashboard = () => {
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-4">
             <TabsTrigger value="inventory">Inventory</TabsTrigger>
             <TabsTrigger value="supply-chain">Supply Chain</TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
+            <TabsTrigger value="payments">Demo payments</TabsTrigger>
             <TabsTrigger value="insights">Demand Insights</TabsTrigger>
           </TabsList>
           
@@ -534,7 +522,7 @@ const RetailerDashboard = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => verifyProduct(item)}
+                          onClick={() => verifyProductByItem(item)}
                           className="w-full md:w-auto"
                         >
                           <ShieldCheck className="h-3 w-3 mr-1" /> View Blockchain Record
@@ -550,8 +538,8 @@ const RetailerDashboard = () => {
           <TabsContent value="payments" className="space-y-4">
             <ResponsiveCard fullWidthOnMobile>
               <CardHeader>
-                <CardTitle>Pending Payments</CardTitle>
-                <CardDescription>Smart contract settlements with distributors</CardDescription>
+                <CardTitle>Demo payment figures</CardTitle>
+                <CardDescription>Static sample data. This screen does not execute payments or settle funds.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -578,10 +566,10 @@ const RetailerDashboard = () => {
                               <Button 
                                 variant="outline" 
                                 size="sm"
-                                onClick={() => initiatePayment(payment.id)}
+                                onClick={() => navigate('/pds')}
                                 className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
                               >
-                                <DollarSign className="h-3 w-3 mr-1" /> Pay Now
+                                <Package className="h-3 w-3 mr-1" /> Open PDS operations
                               </Button>
                             </td>
                           </tr>
@@ -608,10 +596,10 @@ const RetailerDashboard = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => initiatePayment(payment.id)}
+                            onClick={() => navigate('/pds')}
                             className="w-full bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
                           >
-                            <DollarSign className="h-3 w-3 mr-1" /> Pay Now
+                            <Package className="h-3 w-3 mr-1" /> Open PDS operations
                           </Button>
                         </ResponsiveLayout>
                       </ResponsiveCard>
@@ -623,8 +611,8 @@ const RetailerDashboard = () => {
             
             <ResponsiveCard fullWidthOnMobile>
               <CardHeader>
-                <CardTitle>Payment History</CardTitle>
-                <CardDescription>Recent transactions and settlements</CardDescription>
+                <CardTitle>Sample history</CardTitle>
+                <CardDescription>Static demonstration content; no settlement records are loaded.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -841,76 +829,6 @@ const RetailerDashboard = () => {
                 setIsVerifyDialogOpen(false);
                 // In a real app, this would download the verification certificate
               }} className="w-full md:w-auto bg-green-600 hover:bg-green-700">Download Certificate</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        
-        <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Smart Contract Payment</DialogTitle>
-              <DialogDescription>
-                Complete payment to distributor with blockchain verification.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <ResponsiveGrid cols={1} colsMd={2} gap="4">
-                <div>
-                  <p className="text-sm font-medium">Distributor</p>
-                  <p>Agri Distributors</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Amount</p>
-                  <p>₹5,000</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Items</p>
-                  <p>Wheat Flour (200 kg)</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Due Date</p>
-                  <p>2023-11-05</p>
-                </div>
-              </ResponsiveGrid>
-              
-              <div className="border rounded-md p-4 bg-muted/50">
-                <p className="text-sm font-medium mb-2">Payment Breakdown</p>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <p className="text-sm">Distributor Share:</p>
-                    <p className="text-sm">₹1,000 (20%)</p>
-                  </div>
-                  <div className="flex justify-between">
-                    <p className="text-sm">Farmer Share:</p>
-                    <p className="text-sm">₹4,000 (80%)</p>
-                  </div>
-                  <div className="border-t pt-2 mt-2 flex justify-between font-medium">
-                    <p>Total:</p>
-                    <p>₹5,000</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="payment-method">Payment Method</Label>
-                <Select>
-                  <SelectTrigger id="payment-method">
-                    <SelectValue placeholder="Select payment method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bank-transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="crypto">Cryptocurrency</SelectItem>
-                    <SelectItem value="upi">UPI</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => setIsPaymentDialogOpen(false)} variant="outline" className="w-full md:w-auto">Cancel</Button>
-              <Button onClick={() => {
-                setIsPaymentDialogOpen(false);
-                alert('Payment completed successfully!');
-              }} className="w-full md:w-auto bg-green-600 hover:bg-green-700">Confirm Payment</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

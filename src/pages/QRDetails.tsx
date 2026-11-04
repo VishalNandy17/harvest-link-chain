@@ -129,6 +129,9 @@ export default function QRDetails() {
                         <Row label="Warehouse / Storage location" value={supabaseData ? supabaseData.batch?.status : (batchData?.location || '—')} />
                         <Row label="Quality check / Packaging status" value={supabaseData ? (supabaseData.verification?.blockchainVerified ? 'Verified' : 'Pending') : (isProduct ? getProductStatus(productData?.product?.status ?? 0) : getProductStatus(batchData?.status ?? 0))} />
                         <Row label="Dispatch date & transportation info" value={supabaseData ? supabaseData.assignment?.data?.vehicle_code || supabaseData.assignment?.data?.route || '—' : '—'} icon={<Truck className="w-4 h-4 text-blockchain-blue" />} />
+                        <Row label="Ethereum transaction" value={supabaseData?.verification?.chain?.transactionHash || 'No confirmed lot transaction'} />
+                        <Row label="Ethereum block" value={supabaseData?.verification?.chain?.blockNumber ?? '—'} />
+                        <Row label="Verification state" value={supabaseData?.verification?.chain?.status || 'unavailable'} />
                       </div>
                     </div>
 

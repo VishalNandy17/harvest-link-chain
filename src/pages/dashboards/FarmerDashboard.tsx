@@ -18,7 +18,6 @@ import { cn } from '@/lib/utils';
 import { CalendarIcon, Tractor, TrendingUp, QrCode, Leaf, BarChart3, DollarSign, Clock, AlertCircle, Plus, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { 
-  createProduct, 
   createBatch, 
   getProduct, 
   getBatch, 
@@ -28,7 +27,6 @@ import {
   generateProductQRCode,
   generateBatchQRCode,
   generateQRCodeDataURL,
-  createProductWithINR,
   convertETHToINR,
   blockchainService,
   Product,
@@ -279,7 +277,7 @@ const FarmerDashboard = () => {
     setIsStorageChoiceOpen(true);
   };
 
-  const createProductOnSupabase = async () => {
+  const registerCropOnEthereum = async () => {
     if (!newProduct.name || !newProduct.description || !newProduct.price) {
       toast({
         title: 'Missing Information',
@@ -316,20 +314,8 @@ const FarmerDashboard = () => {
         farmerWallet: newProduct.farmerWallet || walletAddress || undefined,
         imageHash: newProduct.imageHash || undefined,
       };
-      let qr: string | undefined;
-      try {
-        const resp: any = await registerCrop(cropPayload);
-        qr = resp?.qrCode || resp?.batch?.qr_code;
-      } catch (err: any) {
-        // Backend failed — fall back to client-side QR generation so the farmer still gets a QR
-        const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-        const fallbackBase = 'https://krishtisetu.vercel.app';
-        qr = `${fallbackBase}/b/off/${unique}`;
-        toast({
-          title: 'Saved locally (offline mode)',
-          description: err?.message || 'Backend unavailable. Generated a local QR for now.',
-        });
-      }
+      const resp: any = await registerCrop(cropPayload);
+      const qr: string | undefined = resp?.qrCode || resp?.batch?.qr_code;
 
       if (qr) {
         setQrType('batch');
@@ -340,7 +326,7 @@ const FarmerDashboard = () => {
         } catch (_) {}
         setIsQRDialogOpen(true);
 
-        // Update My Batches (off-chain entry)
+        // Mirror the confirmed chain lot in the farmer dashboard.
         const batchId = `${Date.now()}`;
         setOffchainBatches(prev => [
           {
@@ -353,7 +339,7 @@ const FarmerDashboard = () => {
           ...prev
         ]);
 
-        // Update My Produce Listings (off-chain entry)
+        // Mirror the confirmed chain lot in the farmer dashboard.
         setOffchainProduce(prev => [
           {
             id: String(batchId),
@@ -368,75 +354,15 @@ const FarmerDashboard = () => {
         ]);
       }
       toast({
-        title: 'Crop submitted',
-        description: 'QR generated. If backend failed, a local QR was created.',
+        title: 'Lot confirmed on Ethereum',
+        description: `Ethereum transaction ${String(resp.chain.transactionHash).slice(0, 12)}… confirmed.`,
       });
       setNewProduct({ name: '', description: '', imageHash: '', price: '', quantityKg: '', mspPerKg: '', farmerWallet: '', region: '' });
       setIsProductDialogOpen(false);
     } catch (e: any) {
-      // As a final fallback, still try to show a QR so the action is not blocked
-      try {
-        const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-        const qrLocal = `https://krishtisetu.vercel.app/b/off/${unique}`;
-        setQrType('batch');
-        setCurrentQRData(qrLocal);
-        try { setCurrentQRCode(await generateQRCodeDataURL(qrLocal)); } catch(_) {}
-        setIsQRDialogOpen(true);
-      } catch (_) {}
-    } finally {
-      setIsCreatingProduct(false);
-      setIsStorageChoiceOpen(false);
-    }
-  };
-
-  const ensureWalletConnected = async (): Promise<string> => {
-    if (walletConnected && walletAddress) return walletAddress;
-    const address = await connectWallet();
-    setWalletConnected(true);
-    setWalletAddress(address);
-    return address;
-  };
-
-  const createProductOnBlockchain = async () => {
-    if (!newProduct.name || !newProduct.description || !newProduct.price) {
       toast({
-        title: 'Missing Information',
-        description: 'Please fill in all required fields',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const inrPrice = parseFloat(newProduct.price);
-    if (isNaN(inrPrice) || inrPrice <= 0) {
-      toast({
-        title: 'Invalid Price',
-        description: 'Please enter a valid INR price',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      setIsCreatingProduct(true);
-      await ensureWalletConnected();
-      const productId = await createProductWithINR(
-        newProduct.name,
-        newProduct.description,
-        newProduct.imageHash || 'QmDefaultImageHash',
-        inrPrice
-      );
-      toast({
-        title: 'Success',
-        description: `Product "${newProduct.name}" created on blockchain with ID: ${productId}`,
-      });
-      setNewProduct({ name: '', description: '', imageHash: '', price: '' });
-      setIsProductDialogOpen(false);
-    } catch (error: any) {
-      console.error('Error creating product on blockchain:', error);
-      toast({
-        title: 'On-chain creation failed',
-        description: error?.message || 'Please check MetaMask and try again.',
+        title: 'Ethereum registration failed',
+        description: e?.message || 'No QR was issued because the lot is not confirmed on chain.',
         variant: 'destructive',
       });
     } finally {
@@ -487,34 +413,6 @@ const FarmerDashboard = () => {
         description: `Batch #${batchId} created successfully with ${newBatch.productIds.length} products`,
       });
       
-      // Persist batch metadata to Supabase for off-chain details and QR mapping
-      try {
-        const qrUrl = generateBatchQRCode(batchId);
-        await supabase.from('batches').insert({
-          batch_id: batchId,
-          farmer_wallet: walletAddress,
-          farmer_id: batchDetails.farmerId,
-          farmer_name: batchDetails.farmerName,
-          phone: batchDetails.phone,
-          village: batchDetails.locationVillage,
-          district: batchDetails.locationDistrict,
-          state: batchDetails.locationState,
-          land_survey: batchDetails.landSurveyNumber,
-          crop_type: batchDetails.cropType,
-          crop_variety: batchDetails.cropVariety,
-          crop_grade: batchDetails.cropGrade,
-          cultivation_date: batchDetails.cultivationDate || null,
-          harvest_date: batchDetails.harvestDate || null,
-          quantity_produced: batchDetails.quantityProduced,
-          certification_info: batchDetails.certificationInfo,
-          product_ids: newBatch.productIds,
-          location: newBatch.location,
-          qr_url: qrUrl
-        });
-      } catch (err) {
-        console.error('Error saving batch details:', err);
-      }
-
       // Reset form and close dialog
       setNewBatch({
         productIds: [],
@@ -1108,11 +1006,11 @@ const FarmerDashboard = () => {
                       <div className="mt-4 space-y-2">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">This Month</span>
-                          <span className="font-medium">{earnings.thisMonth}</span>
+                          <span className="font-medium">Not available</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Last Month</span>
-                          <span className="font-medium">{earnings.lastMonth}</span>
+                          <span className="font-medium">Not available</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Pending</span>
@@ -1259,39 +1157,18 @@ const FarmerDashboard = () => {
         onClose={() => setIsQRDialogOpen(false)}
       />
 
-      {/* Storage Choice Dialog */}
+      {/* Ethereum lot registration dialog */}
       <Dialog open={isStorageChoiceOpen} onOpenChange={setIsStorageChoiceOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Where do you want to store this product?</DialogTitle>
+            <DialogTitle>Register this lot on Ethereum</DialogTitle>
             <DialogDescription>
-              Choose Blockchain (MetaMask) for on-chain record, or Supabase (No MetaMask) for free gasless record with blockchain anchoring.
+              Connect an authorized wallet and confirm the transaction. Detailed crop records stay in the application database; the public chain stores the lot identifier and integrity commitment.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="border">
-              <CardHeader>
-                <CardTitle>Blockchain (MetaMask)</CardTitle>
-                <CardDescription>Requires MetaMask, on-chain record, transaction fees apply on real network.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button onClick={createProductOnBlockchain} disabled={isCreatingProduct} className="w-full">
-                  {isCreatingProduct ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</> : 'Store on Blockchain'}
-                </Button>
-              </CardContent>
-            </Card>
-            <Card className="border">
-              <CardHeader>
-                <CardTitle>Supabase (No MetaMask)</CardTitle>
-                <CardDescription>Free and instant. Data stored off-chain with blockchain-style proof (hash).</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" onClick={createProductOnSupabase} disabled={isCreatingProduct} className="w-full">
-                  {isCreatingProduct ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : 'Store in Supabase'}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+          <Button onClick={registerCropOnEthereum} disabled={isCreatingProduct} className="w-full">
+            {isCreatingProduct ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Waiting for Ethereum confirmation…</> : 'Submit Ethereum transaction'}
+          </Button>
         </DialogContent>
       </Dialog>
 

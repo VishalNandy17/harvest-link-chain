@@ -227,7 +227,7 @@ class BlockchainService {
   }
 
   // Subscribe to specific event types
-  public on(eventType: BlockchainEventType, callback: EventCallback): () => void {
+  public on(eventType: BlockchainEventType | '*', callback: EventCallback): () => void {
     if (!this.eventListeners[eventType]) {
       this.eventListeners[eventType] = [];
     }
@@ -270,6 +270,7 @@ class BlockchainService {
         if (this.eventListeners[eventName]) {
           this.eventListeners[eventName].forEach(callback => callback(formattedEvent));
         }
+        this.eventListeners['*']?.forEach(callback => callback(formattedEvent));
         
         // Notify general listeners
         if (this.eventListeners['*']) {
@@ -420,4 +421,3 @@ class BlockchainService {
 const blockchainService = BlockchainService.getInstance();
 
 export { blockchainService };
-export type { Product, Batch, BlockchainEvent, EventFilter };

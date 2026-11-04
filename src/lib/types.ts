@@ -3,6 +3,10 @@ export enum UserRole {
   FARMER = 'farmer',
   DISTRIBUTOR = 'distributor',
   RETAILER = 'retailer',
+  PROCUREMENT = 'procurement',
+  WAREHOUSE = 'warehouse',
+  TRANSPORTER = 'transporter',
+  AUDITOR = 'auditor',
   CONSUMER = 'consumer',
   ADMIN = 'admin'
 }

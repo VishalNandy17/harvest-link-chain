@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { ethers } from 'ethers';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { connectWallet, ensureBlockchainReady, registerPdsLot, signWalletLinkProof, transferPdsCustody, purchaseBatch as purchaseBatchOnChain } from '@/lib/blockchain';
 
 export const useBlockchain = () => {
   const [loading, setLoading] = useState(false);
@@ -16,8 +18,15 @@ export const useBlockchain = () => {
         throw new Error('Please login to register crops');
       }
 
+      const wallet = await connectWallet();
+      await ensureBlockchainReady();
+      const userId = session.data.session!.user.id;
+      const walletProof = await signWalletLinkProof(userId);
+      const { error: linkError } = await supabase.functions.invoke('link-wallet', { body: walletProof });
+      if (linkError) throw linkError;
+
       const { data, error } = await supabase.functions.invoke('register-crop', {
-        body: { cropData }
+        body: { cropData: { ...cropData, farmerWallet: wallet } }
       });
 
       // If supabase-js surfaced an error, throw it
@@ -30,12 +39,36 @@ export const useBlockchain = () => {
         throw new Error((data as any).error);
       }
 
-      toast({
-        title: "Success",
-        description: "Crop registered and QR generated",
+      if (!(data as any)?.batch?.id || !(data as any)?.blockchainHash) {
+        throw new Error('Crop was saved without a verifiable on-chain commitment. Retry after checking the registration record.');
+      }
+
+      const chainReceipt = await registerPdsLot({
+        lotId: String((data as any).batch.id),
+        commodity: String((data as any).crop.name),
+        quantity: String((data as any).batch.quantity),
+        unit: String((data as any).batch.unit || 'kg'),
+        custodian: wallet,
+        dataHash: String((data as any).blockchainHash),
       });
 
-      return data;
+      const { data: confirmation, error: confirmationError } = await supabase.functions.invoke('confirm-chain-record', {
+        body: {
+          batchId: String((data as any).batch.id),
+          transactionHash: chainReceipt.transactionHash,
+          lotId: chainReceipt.lotId,
+          chainId: chainReceipt.chainId,
+        },
+      });
+      if (confirmationError) throw confirmationError;
+      if (!(confirmation as any)?.verified) throw new Error('Ethereum transaction was mined, but server verification did not confirm its event.');
+
+      toast({
+        title: "Success",
+        description: "Crop registered and confirmed on the configured Ethereum network",
+      });
+
+      return { ...(data as object), chain: confirmation };
     } catch (error) {
       console.error('Error registering crop:', error);
       toast({
@@ -49,23 +82,20 @@ export const useBlockchain = () => {
     }
   };
 
-  const assignDistributor = async (batchId: string, distributorUserId: string, route?: string, vehicleCode?: string) => {
+  const assignDistributor = async (lotId: string, distributorWallet: string, route?: string, vehicleCode?: string) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('assign-distributor', {
-        body: { batchId, distributorUserId, route, vehicleCode }
-      });
-
-      if (error) {
-        throw error;
-      }
+      const dataHash = ethers.sha256(ethers.toUtf8Bytes(JSON.stringify({
+        schema: 'harvestlink.pds.custody-transfer.v1', lotId, route: route || null, vehicleCode: vehicleCode || null,
+      })));
+      const transactionHash = await transferPdsCustody(lotId, distributorWallet, dataHash);
 
       toast({
-        title: "Distributor assigned",
-        description: "Batch assigned to distributor and tracking started",
+        title: "Custody transfer confirmed",
+        description: `Ethereum transaction ${transactionHash.slice(0, 12)}… confirmed`,
       });
 
-      return data;
+      return { transactionHash };
     } catch (error) {
       console.error('Error assigning distributor:', error);
       toast({
@@ -82,20 +112,14 @@ export const useBlockchain = () => {
   const purchaseBatch = async (batchId: string, quantity: number) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('purchase-batch', {
-        body: { batchId, quantity }
-      });
-
-      if (error) {
-        throw error;
-      }
+      const transactionHash = await purchaseBatchOnChain(Number(batchId), String(quantity));
 
       toast({
-        title: "Success",
-        description: "Purchase completed and recorded on blockchain",
+        title: "Batch handoff confirmed",
+        description: `Ethereum transaction ${transactionHash.slice(0, 12)}… confirmed`,
       });
 
-      return data;
+      return { transactionHash };
     } catch (error) {
       console.error('Error purchasing batch:', error);
       toast({

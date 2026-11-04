@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ethers } from "npm:ethers@6.15.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,7 +31,7 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     // Get batch information with full supply chain data
@@ -91,22 +92,20 @@ serve(async (req) => {
     const journey: any[] = [];
 
     // Farmer registration
-    const farmerFirst = batch?.crops?.farmer?.first_name || '';
-    const farmerLast = batch?.crops?.farmer?.last_name || '';
     if (batch?.crops) {
       journey.push({
         step: 'Crop Registration',
-        actor: `${farmerFirst} ${farmerLast}`.trim() || 'Unknown Farmer',
+        actor: 'Originating producer',
         role: 'Farmer',
         timestamp: batch.crops.created_at,
-        location: batch.crops.location,
+        location: batch.crops.region || 'Region not disclosed',
         details: {
           crop: batch.crops.name,
           quantity: `${batch.crops.quantity ?? batch.quantity} ${batch.crops.unit ?? batch.unit}`,
           harvestDate: batch.crops.harvest_date,
           certifications: batch.crops.certifications || []
         },
-        verified: true
+        verified: false
       });
     }
 
@@ -114,7 +113,7 @@ serve(async (req) => {
     (batch.transactions || []).forEach((transaction: any) => {
       journey.push({
         step: 'Purchase',
-        actor: `${transaction?.buyer?.first_name ?? ''} ${transaction?.buyer?.last_name ?? ''}`.trim() || 'Unknown Buyer',
+        actor: 'Supply chain recipient',
         role: transaction?.buyer?.role || 'Distributor',
         timestamp: transaction.created_at,
         details: {
@@ -122,7 +121,7 @@ serve(async (req) => {
           price: `₹${transaction.total_price}`,
           status: transaction.status
         },
-        verified: true
+        verified: false
       });
     });
 
@@ -131,9 +130,75 @@ serve(async (req) => {
     const predictedPrice = batch?.crops?.predicted_price ?? null;
     const fairPriceAchieved = predictedPrice ? (farmerPrice >= predictedPrice * 0.9) : true;
 
-    // Blockchain verification
-    const blockchainVerified = (batch.blockchain_records || []).length > 0 && 
-                              (batch.blockchain_records || []).every((record: any) => record.verified);
+    // A database flag alone is never proof. Recheck the confirmed receipt and event.
+    const chainRecord = (batch.blockchain_records || []).find((record: any) =>
+      record.record_type === 'crop_registration' && record.transaction_hash && record.contract_address
+    );
+    const canonicalLotData = batch.crops ? {
+      schema: 'harvestlink.pds.lot.v1',
+      lotId: String(batch.id),
+      commodity: String(batch.crops.name).trim().toLowerCase(),
+      quantity: Number(batch.crops.quantity).toFixed(3),
+      unit: String(batch.crops.unit || 'kg').trim().toLowerCase(),
+      description: String(batch.crops.description || ''),
+      harvestDate: batch.crops.harvest_date || null,
+      certifications: (Array.isArray(batch.crops.certifications) ? batch.crops.certifications : []).map((value: unknown) => String(value).trim()).sort(),
+      pricePerUnit: Number(batch.crops.price_per_unit).toFixed(2),
+      region: String(batch.crops.region || ''),
+      createdAt: batch.crops.created_at,
+    } : null;
+    const recomputedDataHash = canonicalLotData
+      ? ethers.sha256(ethers.toUtf8Bytes(JSON.stringify(canonicalLotData)))
+      : null;
+    let blockchainVerified = false;
+    let chainVerification: any = chainRecord
+      ? { status: 'unavailable', transactionHash: chainRecord.transaction_hash }
+      : { status: 'not_submitted' };
+    const rpcUrl = Deno.env.get('ETHEREUM_RPC_URL');
+    const expectedChainId = Deno.env.get('ETHEREUM_CHAIN_ID');
+    const expectedContract = Deno.env.get('HARVESTLINK_CONTRACT_ADDRESS');
+    if (chainRecord && rpcUrl && expectedChainId && expectedContract) {
+      try {
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const network = await provider.getNetwork();
+        const headBlock = await provider.getBlockNumber();
+        const minimumConfirmations = Math.max(1, Number(Deno.env.get('ETHEREUM_CONFIRMATIONS') ?? '2'));
+        const receipt = await provider.getTransactionReceipt(chainRecord.transaction_hash);
+        const confirmations = receipt ? headBlock - receipt.blockNumber + 1 : 0;
+        const iface = new ethers.Interface([
+          'event LotRegistered(bytes32 indexed lotId, bytes32 indexed commodityCode, address indexed originator, address custodian, uint128 quantity, bytes32 unitCode, bytes32 dataHash, bytes32 parentId)',
+        ]);
+        const log = receipt?.logs.find((entry) => {
+          if (ethers.getAddress(entry.address) !== ethers.getAddress(expectedContract)) return false;
+          try { return iface.parseLog(entry)?.name === 'LotRegistered'; } catch { return false; }
+        });
+        const parsed = log ? iface.parseLog(log) : null;
+        const expectedLot = ethers.id(String(batch.id));
+        blockchainVerified = network.chainId.toString() === String(expectedChainId)
+          && chainRecord.chain_id === String(expectedChainId)
+          && ethers.getAddress(chainRecord.contract_address) === ethers.getAddress(expectedContract)
+          && receipt?.status === 1
+          && confirmations >= minimumConfirmations
+          && Boolean(parsed)
+          && String(parsed?.args.lotId).toLowerCase() === expectedLot.toLowerCase()
+          && recomputedDataHash?.toLowerCase() === `0x${chainRecord.hash}`.toLowerCase()
+          && String(parsed?.args.dataHash).toLowerCase() === `0x${chainRecord.hash}`.toLowerCase();
+        chainVerification = {
+          status: blockchainVerified ? 'confirmed' : (receipt?.status === 1 && confirmations < minimumConfirmations ? 'pending_confirmation' : 'unverified'),
+          chainId: chainRecord.chain_id,
+          contractAddress: chainRecord.contract_address,
+          transactionHash: chainRecord.transaction_hash,
+          blockNumber: chainRecord.block_number,
+          explorerUrl: Deno.env.get('ETHEREUM_EXPLORER_URL')
+            ? `${Deno.env.get('ETHEREUM_EXPLORER_URL')!.replace(/\/$/, '')}/tx/${chainRecord.transaction_hash}`
+            : null,
+        };
+      } catch (chainError) {
+        console.error('On-chain QR verification failed:', chainError);
+        chainVerification = { status: 'unavailable' };
+      }
+    }
+    if (journey.length > 0) journey[0].verified = blockchainVerified;
 
     const verificationResult = {
       success: true,
@@ -152,12 +217,13 @@ serve(async (req) => {
         certifications: (batch?.crops?.certifications as any) || []
       },
       farmer: {
-        name: `${farmerFirst} ${farmerLast}`.trim() || 'Unknown Farmer',
-        location: batch?.crops?.location || '',
-        contact: batch?.crops?.farmer?.phone || ''
+        name: 'Verified producer',
+        location: batch?.crops?.region || 'Region not disclosed',
+        contact: ''
       },
       verification: {
         blockchainVerified,
+        chain: chainVerification,
         fairPriceAchieved,
         recordsCount: batch.blockchain_records.length,
         lastVerified: batch.blockchain_records[0]?.timestamp

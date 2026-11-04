@@ -314,6 +314,10 @@ const SignUp = () => {
                       <SelectItem value={UserRole.FARMER}>Farmer</SelectItem>
                       <SelectItem value={UserRole.DISTRIBUTOR}>Distributor</SelectItem>
                       <SelectItem value={UserRole.RETAILER}>Retailer</SelectItem>
+                      <SelectItem value={UserRole.PROCUREMENT}>Procurement authority</SelectItem>
+                      <SelectItem value={UserRole.WAREHOUSE}>Warehouse operator</SelectItem>
+                      <SelectItem value={UserRole.TRANSPORTER}>Transporter</SelectItem>
+                      <SelectItem value={UserRole.AUDITOR}>Auditor</SelectItem>
                       <SelectItem value={UserRole.CONSUMER}>Consumer</SelectItem>
                     </SelectContent>
                   </Select>
@@ -321,6 +325,7 @@ const SignUp = () => {
                 {errors.role && (
                   <p className="text-sm text-red-600">{errors.role.message}</p>
                 )}
+                <p className="text-xs text-muted-foreground">Operator access is granted only after an administrator approves your request.</p>
               </div>
 
               <div className="flex items-start space-x-2">

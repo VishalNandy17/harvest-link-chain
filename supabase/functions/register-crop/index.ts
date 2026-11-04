@@ -86,6 +86,8 @@ serve(async (req) => {
         description: cropData.description || null,
         harvest_date: cropData.harvestDate || null,
         location: cropData.location || null,
+        region: cropData.region || null,
+        farmer_wallet: cropData.farmerWallet || null,
         certifications: Array.isArray(cropData.certifications) ? cropData.certifications : [],
         status: 'created'
       }])
@@ -126,7 +128,8 @@ serve(async (req) => {
 
     // Build public QR URL using our external site and update batch
     const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    const qrCode = `https://krishtisetu.vercel.app/b/${encodeURIComponent(batch.id)}/${encodeURIComponent(unique)}`;
+    const publicAppUrl = (Deno.env.get('PUBLIC_APP_URL') || 'https://krishtisetu.vercel.app').replace(/\/$/, '');
+    const qrCode = `${publicAppUrl}/b/${encodeURIComponent(batch.id)}/${encodeURIComponent(unique)}`;
 
     const { error: updateErr } = await supabase
       .from('batches')
@@ -137,15 +140,21 @@ serve(async (req) => {
       console.error('Failed to update batch qr_code:', updateErr);
     }
 
-    // Create blockchain record (best-effort)
+    // Create a public-safe, deterministic payload commitment. This row is pending
+    // until the browser wallet submits a transaction and confirm-chain-record verifies it.
     try {
       const blockchainData = {
-        farmer: profile.id,
-        crop: crop.name,
-        quantity: crop.quantity,
-        price: crop.price_per_unit,
-        timestamp: new Date().toISOString(),
-        location: crop.location
+        schema: 'harvestlink.pds.lot.v1',
+        lotId: String(batch.id),
+        commodity: String(crop.name).trim().toLowerCase(),
+        quantity: Number(crop.quantity).toFixed(3),
+        unit: String(crop.unit || 'kg').trim().toLowerCase(),
+        description: String(crop.description || ''),
+        harvestDate: crop.harvest_date || null,
+        certifications: (Array.isArray(crop.certifications) ? crop.certifications : []).map((value: unknown) => String(value).trim()).sort(),
+        pricePerUnit: Number(crop.price_per_unit).toFixed(2),
+        region: String(crop.region || ''),
+        createdAt: crop.created_at,
       };
 
       const encoder = new TextEncoder();
@@ -161,11 +170,12 @@ serve(async (req) => {
           record_type: 'crop_registration',
           data: blockchainData,
           hash: hashHex,
-          verified: true
+          verified: false
         }]);
 
       if (blockchainError) {
         console.error('Blockchain record error:', blockchainError);
+        return new Response(JSON.stringify({ error: 'Failed to create pending chain commitment', detail: blockchainError.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       return new Response(
@@ -174,7 +184,8 @@ serve(async (req) => {
           crop: crop,
           batch: { ...batch, qr_code: qrCode },
           qrCode: qrCode,
-          blockchainHash: hashHex
+          blockchainHash: hashHex,
+          chainStatus: 'awaiting_wallet_transaction'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

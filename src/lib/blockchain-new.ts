@@ -278,7 +278,6 @@ class BlockchainService {
 const blockchainService = BlockchainService.getInstance();
 
 export { blockchainService };
-export type { Product, Batch, BlockchainEvent, EventFilter };
 
 // Helper functions
 export const formatEther = (wei: bigint | string): string => {

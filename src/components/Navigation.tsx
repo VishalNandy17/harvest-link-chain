@@ -35,6 +35,11 @@ export const Navigation = () => {
         return "/dashboards/distributor";
       case UserRole.RETAILER:
         return "/dashboards/retailer";
+      case UserRole.PROCUREMENT:
+      case UserRole.WAREHOUSE:
+      case UserRole.TRANSPORTER:
+      case UserRole.AUDITOR:
+        return "/pds";
       case UserRole.CONSUMER:
         return "/dashboards/consumer";
       case UserRole.ADMIN:
@@ -70,6 +75,7 @@ export const Navigation = () => {
               <Link to={dashboardPath} className="px-4 py-2 rounded-full text-sm font-medium text-foreground hover:bg-white hover:text-farm-primary transition-all duration-200 hover:shadow-sm">
                 Dashboard
               </Link>
+              {user && userRole !== UserRole.CONSUMER && <Link to="/pds" className="px-4 py-2 rounded-full text-sm font-medium text-foreground hover:bg-white hover:text-farm-primary transition-all duration-200 hover:shadow-sm">PDS Operations</Link>}
               <a href="#track" className="px-4 py-2 rounded-full text-sm font-medium text-foreground hover:bg-white hover:text-farm-primary transition-all duration-200 hover:shadow-sm">
                 Track Produce
               </a>
@@ -99,6 +105,7 @@ export const Navigation = () => {
                   <DropdownMenuItem asChild>
                     <Link to={dashboardPath}>Dashboard</Link>
                   </DropdownMenuItem>
+                  {userRole !== UserRole.CONSUMER && <DropdownMenuItem asChild><Link to="/pds">PDS Operations</Link></DropdownMenuItem>}
                   <DropdownMenuItem asChild>
                     <Link to="/profile">Profile</Link>
                   </DropdownMenuItem>
@@ -141,6 +148,7 @@ export const Navigation = () => {
               <Link to={dashboardPath} className="px-4 py-3 rounded-xl text-foreground hover:bg-muted/50 hover:text-farm-primary transition-all duration-200 font-medium">
                 Dashboard
               </Link>
+              {user && userRole !== UserRole.CONSUMER && <Link to="/pds" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 rounded-xl text-foreground hover:bg-muted/50 hover:text-farm-primary transition-all duration-200 font-medium">PDS Operations</Link>}
               <a href="#track" className="px-4 py-3 rounded-xl text-foreground hover:bg-muted/50 hover:text-farm-primary transition-all duration-200 font-medium">
                 Track Produce
               </a>

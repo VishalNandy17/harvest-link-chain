@@ -89,11 +89,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(session?.user ?? null)
     
     if (session?.user) {
-      // Set a fast role from user metadata to avoid loading flashes
-      const metaRole = (session.user.user_metadata as any)?.role as UserRole | undefined
-      if (metaRole) {
-        setUserRole(metaRole)
-      }
+      setUserRole(null)
       // Fetch full profile in background and refine role
       fetchProfile(session.user.id)
         .then((userProfile) => {
@@ -154,7 +150,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         data: {
           firstName: userData.firstName,
           lastName: userData.lastName,
-          role: userData.role
+          role: UserRole.CONSUMER,
+          requestedRole: userData.role
         }
       }
     })

@@ -17,6 +17,8 @@ import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import QRDetails from "./pages/QRDetails";
+import PDSOperations from "./pages/PDSOperations";
+import PDSLotDetails from "./pages/PDSLotDetails";
 
 // Role-specific dashboards
 import FarmerDashboard from "@/pages/dashboards/FarmerDashboard";
@@ -41,9 +43,15 @@ const App = () => (
             <Route path="/signup" element={<SignUp />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/lot/:lotId" element={<PDSLotDetails />} />
             
             {/* Protected routes */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/pds" element={
+              <ProtectedRoute allowedRoles={[UserRole.FARMER, UserRole.DISTRIBUTOR, UserRole.RETAILER, UserRole.PROCUREMENT, UserRole.WAREHOUSE, UserRole.TRANSPORTER, UserRole.AUDITOR, UserRole.ADMIN]}>
+                <PDSOperations />
+              </ProtectedRoute>
+            } />
             
             {/* Role-specific dashboard routes */}
             <Route path="/dashboards/farmer" element={
