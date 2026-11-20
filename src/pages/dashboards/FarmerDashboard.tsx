@@ -29,6 +29,8 @@ import {
   generateQRCodeDataURL,
   convertETHToINR,
   blockchainService,
+  switchNetwork,
+  checkNetwork,
   Product,
   Batch
 } from '@/lib/blockchain';
@@ -40,6 +42,7 @@ const FarmerDashboard = () => {
   const { user, profile, userRole, loading } = useAuth();
   const navigate = useNavigate();
   const [walletConnected, setWalletConnected] = useState(false);
+  const [isWrongNetwork, setIsWrongNetwork] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -172,6 +175,13 @@ const FarmerDashboard = () => {
         if (account) {
           setWalletConnected(true);
           setWalletAddress(account);
+          const net = await checkNetwork().catch(() => ({ valid: true }));
+          if (net.valid) {
+            setIsWrongNetwork(false);
+            loadFarmData(account).catch(() => {});
+          } else {
+            setIsWrongNetwork(true);
+          }
         }
       } catch (error) {
         console.error('Error initializing wallet:', error);
@@ -183,64 +193,105 @@ const FarmerDashboard = () => {
     init();
   }, []);
 
+  // Listen to MetaMask network and account switches in real-time
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      const eth = (window as any).ethereum;
+      const onChainChanged = () => {
+        checkNetwork().then(net => {
+          setIsWrongNetwork(!net.valid);
+          if (net.valid && walletAddress) {
+            loadFarmData(walletAddress).catch(() => {});
+          }
+        });
+      };
+      const onAccountsChanged = (accounts: string[]) => {
+        if (accounts.length > 0) {
+          setWalletAddress(accounts[0]);
+          setWalletConnected(true);
+          checkNetwork().then(net => {
+            setIsWrongNetwork(!net.valid);
+            if (net.valid) {
+              loadFarmData(accounts[0]).catch(() => {});
+            }
+          });
+        } else {
+          setWalletAddress('');
+          setWalletConnected(false);
+          setIsWrongNetwork(false);
+        }
+      };
+
+      eth.on?.('chainChanged', onChainChanged);
+      eth.on?.('accountsChanged', onAccountsChanged);
+      return () => {
+        eth.removeListener?.('chainChanged', onChainChanged);
+        eth.removeListener?.('accountsChanged', onAccountsChanged);
+      };
+    }
+  }, [walletAddress]);
+
   const loadFarmData = async (account: string) => {
     try {
       setIsLoading(true);
 
-      // Start blockchain event listeners to get real-time updates
-      await blockchainService.startEventListeners();
+      // Start blockchain event listeners to get real-time updates (non-blocking)
+      try {
+        await blockchainService.startEventListeners();
 
-      // Listen for new products and batches
-      blockchainService.on('ProductCreated', async (event) => {
-        if (event.data.farmer.toLowerCase() === account.toLowerCase()) {
-          try {
-            const product = await getProduct(event.data.productId);
-            setProducts(prev => [product, ...prev]);
-            toast({
-              title: 'New Product Created',
-              description: `Product "${product.name}" has been added to blockchain`,
-            });
-          } catch (error) {
-            console.error('Error fetching new product:', error);
+        // Listen for new products and batches
+        blockchainService.on('ProductCreated', async (event) => {
+          if (event.data.farmer.toLowerCase() === account.toLowerCase()) {
+            try {
+              const product = await getProduct(event.data.productId);
+              setProducts(prev => [product, ...prev]);
+              toast({
+                title: 'New Product Created',
+                description: `Product "${product.name}" has been added to blockchain`,
+              });
+            } catch (error) {
+              console.error('Error fetching new product:', error);
+            }
           }
-        }
-      });
+        });
 
-      blockchainService.on('BatchCreated', async (event) => {
-        if (event.data.creator.toLowerCase() === account.toLowerCase()) {
-          try {
-            const batch = await getBatch(event.data.batchId);
-            setBatches(prev => [batch, ...prev]);
+        blockchainService.on('BatchCreated', async (event) => {
+          if (event.data.creator.toLowerCase() === account.toLowerCase()) {
+            try {
+              const batch = await getBatch(event.data.batchId);
+              setBatches(prev => [batch, ...prev]);
 
-            // Automatically generate QR code for new batch
-            const qrData = generateBatchQRCode(batch.id);
-            setCurrentQRData(qrData);
-            setQrType('batch');
-            const qrCodeUrl = await generateQRCodeDataURL(qrData);
-            setCurrentQRCode(qrCodeUrl);
-            setIsQRDialogOpen(true);
+              // Automatically generate QR code for new batch
+              const qrData = generateBatchQRCode(batch.id);
+              setCurrentQRData(qrData);
+              setQrType('batch');
+              const qrCodeUrl = await generateQRCodeDataURL(qrData);
+              setCurrentQRCode(qrCodeUrl);
+              setIsQRDialogOpen(true);
 
-            toast({
-              title: 'New Batch Created',
-              description: `Batch #${batch.id} has been created with ${batch.productIds.length} products`,
-            });
-          } catch (error) {
-            console.error('Error fetching new batch:', error);
+              toast({
+                title: 'New Batch Created',
+                description: `Batch #${batch.id} has been created with ${batch.productIds.length} products`,
+              });
+            } catch (error) {
+              console.error('Error fetching new batch:', error);
+            }
           }
-        }
-      });
+        });
+      } catch (listenerErr) {
+        console.warn('Realtime on-chain event listeners skipped (non-Sepolia or offline):', listenerErr);
+      }
 
-      // Load existing products and batches
-      await loadExistingProducts(account);
-      await loadExistingBatches(account);
+      // Load existing products and batches (non-blocking)
+      try {
+        await loadExistingProducts(account);
+        await loadExistingBatches(account);
+      } catch (chainQueryErr) {
+        console.warn('On-chain products/batches query skipped:', chainQueryErr);
+      }
 
     } catch (error) {
-      console.error('Error loading farm data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load farm data',
-        variant: 'destructive',
-      });
+      console.error('Error in loadFarmData:', error);
     } finally {
       setIsLoading(false);
     }
@@ -314,20 +365,29 @@ const FarmerDashboard = () => {
       setWalletConnected(true);
       setWalletAddress(address);
 
+      const net = await checkNetwork().catch(() => ({ valid: true }));
+      if (!net.valid) {
+        setIsWrongNetwork(true);
+        toast({
+          title: 'MetaMask on Wrong Network',
+          description: 'Wallet connected! Please switch your wallet to Sepolia Testnet (Chain ID 11155111) to sync on-chain data.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setIsWrongNetwork(false);
       toast({
         title: 'MetaMask Connected',
-        description: `Wallet connected successfully! Address: ${address.slice(0, 6)}...${address.slice(-4)}`,
+        description: `Wallet connected successfully on Sepolia! Address: ${address.slice(0, 6)}...${address.slice(-4)}`,
       });
 
       // Load farm data after successful connection
       await loadFarmData(address);
     } catch (error: any) {
       console.error('Error connecting wallet:', error);
-      setWalletConnected(false);
-      setWalletAddress('');
-
       toast({
-        title: 'Could not connect MetaMask',
+        title: 'Wallet Connection Info',
         description: error.message || 'Check that MetaMask is installed, unlocked, and you approved the request.',
         variant: 'destructive',
       });
@@ -711,6 +771,47 @@ const FarmerDashboard = () => {
                     Connect MetaMask
                   </>
                 )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {walletConnected && isWrongNetwork && (
+          <Card className="mb-8 border-amber-300 bg-amber-50">
+            <CardHeader className="pb-2">
+              <div className="flex items-center space-x-2 text-amber-800">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+                <CardTitle className="text-base">Unsupported Network Detected in MetaMask</CardTitle>
+              </div>
+              <CardDescription className="text-amber-700 text-xs">
+                Your wallet is connected to a different network. Please switch to Ethereum Sepolia Testnet (Chain ID: 11155111) to record on-chain lots.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Button
+                size="sm"
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={async () => {
+                  try {
+                    await switchNetwork();
+                    setIsWrongNetwork(false);
+                    toast({
+                      title: "Network Switched",
+                      description: "Successfully switched to Sepolia Testnet",
+                    });
+                    if (walletAddress) {
+                      loadFarmData(walletAddress);
+                    }
+                  } catch (e: any) {
+                    toast({
+                      title: "Network Switch Failed",
+                      description: e?.message || "Please switch to Sepolia manually in MetaMask.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Switch Network to Sepolia
               </Button>
             </CardContent>
           </Card>

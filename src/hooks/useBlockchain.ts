@@ -92,7 +92,7 @@ export const useBlockchain = () => {
 
       toast({
         title: "Custody transfer confirmed",
-        description: `Ethereum transaction ${transactionHash.slice(0, 12)}… confirmed`,
+        description: `Ethereum transaction ${transactionHash.slice(0, 12)}... confirmed`,
       });
 
       return { transactionHash };
@@ -116,7 +116,7 @@ export const useBlockchain = () => {
 
       toast({
         title: "Batch handoff confirmed",
-        description: `Ethereum transaction ${transactionHash.slice(0, 12)}… confirmed`,
+        description: `Ethereum transaction ${transactionHash.slice(0, 12)}... confirmed`,
       });
 
       return { transactionHash };

@@ -184,9 +184,11 @@ const DistributorDashboard = () => {
         } catch { /* skip holes */ }
       }
       setBatches(list);
-    } catch (error) {
-      console.error('Error loading batches:', error);
-      toast({ title: 'Error', description: 'Failed to load batches from chain', variant: 'destructive' });
+    } catch (error: any) {
+      console.warn('Could not load batches from chain (unsupported network or offline):', error);
+      if (error?.message?.includes('Wrong network')) {
+        toast({ title: 'Wrong Network', description: 'Switch wallet to Sepolia (Chain 11155111) to read on-chain batches.', variant: 'destructive' });
+      }
     } finally {
       setIsLoading(false);
     }

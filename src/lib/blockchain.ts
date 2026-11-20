@@ -60,7 +60,20 @@ class BlockchainService {
   private isListening = false;
   private eventSubscriptions: { [key: string]: () => void } = {};
 
-  private constructor() {}
+  private constructor() {
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      const eth = (window as any).ethereum;
+      eth.on?.('chainChanged', () => {
+        this.provider = null;
+        this.contract = null;
+        this.isListening = false;
+      });
+      eth.on?.('accountsChanged', () => {
+        this.provider = null;
+        this.contract = null;
+      });
+    }
+  }
 
   public static getInstance(): BlockchainService {
     if (!BlockchainService.instance) {
@@ -84,19 +97,89 @@ class BlockchainService {
     return this.getProvider();
   }
 
+  public async switchNetwork(): Promise<void> {
+    if (typeof window === 'undefined' || !(window as any).ethereum) {
+      throw new Error('MetaMask not detected. Install MetaMask to switch networks.');
+    }
+    const targetChainIdHex = EXPECTED_CHAIN_ID
+      ? `0x${EXPECTED_CHAIN_ID.toString(16)}`
+      : '0xaa36a7'; // Sepolia (11155111)
+
+    const eth = (window as any).ethereum;
+    try {
+      await eth.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: targetChainIdHex }],
+      });
+    } catch (switchError: any) {
+      if (switchError?.code === 4902 || switchError?.data?.originalError?.code === 4902) {
+        await eth.request({
+          method: 'wallet_addEthereumChain',
+          params: [
+            {
+              chainId: targetChainIdHex,
+              chainName: 'Sepolia',
+              nativeCurrency: {
+                name: 'Sepolia ETH',
+                symbol: 'ETH',
+                decimals: 18,
+              },
+              rpcUrls: [
+                'https://eth-sepolia.g.alchemy.com/v2/alch_85BacZtapOQPfIwVVcp9v',
+                'https://rpc.sepolia.org',
+                'https://ethereum-sepolia-rpc.publicnode.com',
+              ],
+              blockExplorerUrls: ['https://sepolia.etherscan.io'],
+            },
+          ],
+        });
+      } else {
+        throw switchError;
+      }
+    } finally {
+      this.provider = null;
+      this.contract = null;
+    }
+  }
+
+  public async checkNetwork(): Promise<{ valid: boolean; currentChainId: bigint | null; expectedChainId: bigint | null }> {
+    try {
+      if (typeof window === 'undefined' || !(window as any).ethereum) {
+        return { valid: true, currentChainId: null, expectedChainId: EXPECTED_CHAIN_ID };
+      }
+      const provider = await this.getProvider();
+      const network = await provider.getNetwork();
+      const valid = EXPECTED_CHAIN_ID === null || network.chainId === EXPECTED_CHAIN_ID;
+      return { valid, currentChainId: network.chainId, expectedChainId: EXPECTED_CHAIN_ID };
+    } catch {
+      return { valid: false, currentChainId: null, expectedChainId: EXPECTED_CHAIN_ID };
+    }
+  }
+
   async getContract() {
     if (!this.contract) {
       const provider = await this.getProvider();
-      const signer = await provider.getSigner();
       if (!CONTRACT_ADDRESS || CONTRACT_ADDRESS === '0x0000000000000000000000000000000000000000') {
         throw new Error('Missing VITE_CONTRACT_ADDRESS. Set it to your deployed contract address.');
       }
       if (EXPECTED_CHAIN_ID !== null) {
-        const network = await provider.getNetwork();
+        let network = await provider.getNetwork();
         if (network.chainId !== EXPECTED_CHAIN_ID) {
-          throw new Error(`Wrong network. Switch your wallet to chain ${EXPECTED_CHAIN_ID.toString()}.`);
+          // Attempt automatic prompt to switch to the configured network
+          try {
+            await this.switchNetwork();
+            const refreshedProvider = await this.getProvider();
+            network = await refreshedProvider.getNetwork();
+          } catch (switchErr) {
+            console.warn('Network switch declined or failed:', switchErr);
+          }
+          if (network.chainId !== EXPECTED_CHAIN_ID) {
+            throw new Error(`Wrong network. Switch your wallet to chain ${EXPECTED_CHAIN_ID.toString()} (Sepolia).`);
+          }
         }
       }
+      const activeProvider = await this.getProvider();
+      const signer = await activeProvider.getSigner();
       this.contract = new ethers.Contract(
         CONTRACT_ADDRESS,
         HarvestLinkABI.abi,
@@ -490,6 +573,18 @@ class BlockchainService {
 
       const account = accounts[0];
 
+      // Proactively prompt network switch to Sepolia if on an unsupported chain
+      if (EXPECTED_CHAIN_ID !== null) {
+        try {
+          const network = await provider.getNetwork();
+          if (network.chainId !== EXPECTED_CHAIN_ID) {
+            await this.switchNetwork();
+          }
+        } catch (switchError) {
+          console.warn('Proactive network switch skipped or user canceled:', switchError);
+        }
+      }
+
       // Do not hard-fail on role checks; log a warning instead to avoid blocking connection
       try {
         const contract = await this.getContract();
@@ -855,4 +950,12 @@ export async function createProductWithINR(
   inrPrice: number
 ): Promise<number> {
   return blockchainService.createProductWithINR(name, description, imageHash, inrPrice);
+}
+
+export async function switchNetwork(): Promise<void> {
+  return blockchainService.switchNetwork();
+}
+
+export async function checkNetwork(): Promise<{ valid: boolean; currentChainId: bigint | null; expectedChainId: bigint | null }> {
+  return blockchainService.checkNetwork();
 }
