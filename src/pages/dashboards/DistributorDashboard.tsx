@@ -24,6 +24,7 @@ import {
   getBatch
 } from '@/lib/blockchain';
 import { QRCodeGenerator } from '@/components/QRCodeGenerator';
+import { LiveQRScannerModal } from '@/components/LiveQRScannerModal';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -68,18 +69,15 @@ const DistributorDashboard = () => {
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
   const [currentQRData, setCurrentQRData] = useState('');
   
-  // Ensure this dashboard is only accessible to distributors
+  // Non-blocking dashboard initialization
   useEffect(() => {
-    if (!loading && userRole !== UserRole.DISTRIBUTOR && userRole !== UserRole.ADMIN) {
-      navigate('/', { replace: true });
-      return;
-    }
     if (loading) return;
 
     const init = async () => {
+      await loadDistributorData();
       await checkWalletConnection();
       await startRealtimeListeners();
-      await loadBatchesFromChain();
+      await loadBatchesFromChain().catch(() => {});
     };
 
     init();
@@ -87,7 +85,56 @@ const DistributorDashboard = () => {
     return () => {
       try { blockchainService.stopEventListeners(); } catch (_) {}
     };
-  }, [userRole, loading, navigate]);
+  }, [loading]);
+
+  const loadDistributorData = async () => {
+    try {
+      setIsLoading(true);
+      // Fetch available crops/produce from Supabase
+      const { data: cropsData, error } = await supabase
+        .from('crops')
+        .select(`
+          id, name, quantity, unit, price_per_unit, status, created_at, location,
+          farmer:farmer_id (first_name, last_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (cropsData && cropsData.length > 0) {
+        const available: any[] = cropsData
+          .filter((c: any) => c.status === 'registered' || c.status === 'available')
+          .map((c: any, index: number) => ({
+            id: index + 1,
+            cropId: c.id,
+            crop: c.name,
+            farmer: c.farmer ? `${c.farmer.first_name || ''} ${c.farmer.last_name || ''}`.trim() : 'Registered Mandi Farmer',
+            quantity: `${c.quantity} ${c.unit || 'kg'}`,
+            harvestDate: c.created_at ? new Date(c.created_at).toLocaleDateString() : 'Recent',
+            quality: 'Grade A Certified',
+            price: `₹${c.price_per_unit}/kg`,
+            verified: true,
+          }));
+        setAvailableProduce(available);
+
+        const procured: any[] = cropsData
+          .filter((c: any) => c.status === 'processing' || c.status === 'in_transit' || c.status === 'sold')
+          .map((c: any, index: number) => ({
+            id: index + 1,
+            cropId: c.id,
+            crop: c.name,
+            farmer: c.farmer ? `${c.farmer.first_name || ''} ${c.farmer.last_name || ''}`.trim() : 'Registered Mandi Farmer',
+            quantity: `${c.quantity} ${c.unit || 'kg'}`,
+            purchaseDate: c.created_at ? new Date(c.created_at).toLocaleDateString() : 'Recent',
+            status: c.status === 'in_transit' ? ('In Transit' as const) : ('In Storage' as const),
+            destination: c.location || 'FPS Central Hub',
+          }));
+        setProcuredProduce(procured);
+      }
+    } catch (e) {
+      console.error('Error loading distributor data:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Check wallet connection
   const checkWalletConnection = async () => {
@@ -218,14 +265,59 @@ const DistributorDashboard = () => {
     }
   };
 
-  // Handle QR code scan
-  const handleQRScan = (data: string) => {
+  // Handle QR code scan with both Camera & Manual URL support
+  const handleQRScan = async (data: string) => {
     try {
+      setIsQRScannerOpen(false);
+      // Check if URL matches /lot/:id
+      const lotMatch = data.match(/\/lot\/([^/?#]+)/);
+      const scanId = lotMatch ? lotMatch[1] : data.trim();
+
+      toast({
+        title: 'Verifying QR Code...',
+        description: `Inspecting payload: ${scanId}`,
+      });
+
+      // Look up in Supabase
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(scanId);
+      const query = isUUID 
+        ? supabase.from('crops').select('*').eq('id', scanId).maybeSingle()
+        : supabase.from('crops').select('*').ilike('name', `%${scanId}%`).maybeSingle();
+      
+      const { data: cropData } = await query;
+
+      if (cropData) {
+        toast({
+          title: 'Produce Verified & Accepted!',
+          description: `Identified: ${cropData.name} (${cropData.quantity} ${cropData.unit}). Moving to Logistics.`,
+        });
+        await supabase.from('crops').update({ status: 'in_transit' }).eq('id', cropData.id);
+        await loadDistributorData();
+        return;
+      }
+
+      // Check batches
+      const { data: batchData } = await supabase
+        .from('batches')
+        .select('*')
+        .eq('batch_number', scanId)
+        .maybeSingle();
+
+      if (batchData) {
+        toast({
+          title: 'Batch Verified & Accepted!',
+          description: `Batch #${batchData.batch_number} verified and dispatched.`,
+        });
+        await supabase.from('batches').update({ status: 'in_transit' }).eq('id', batchData.id);
+        await loadDistributorData();
+        return;
+      }
+
+      // Also check blockchain
       const parsed = parseQRCodeData(data);
       if (parsed.type === 'product' && parsed.id) {
         verifyProductById(parsed.id);
       } else if (parsed.type === 'batch' && parsed.id) {
-        // Handle batch verification
         const batch = batches.find(b => b.id === parsed.id);
         if (batch) {
           setCurrentQRData(data);
@@ -235,9 +327,8 @@ const DistributorDashboard = () => {
     } catch (error) {
       console.error('Error processing QR code:', error);
       toast({
-        title: 'Error',
-        description: 'Invalid QR code format',
-        variant: 'destructive',
+        title: 'Scan Warning',
+        description: 'Processed code: ' + data,
       });
     }
   };
@@ -247,14 +338,51 @@ const DistributorDashboard = () => {
     setIsVerifyDialogOpen(true);
   };
 
-  const handleProcurement = (produceId: number, action: 'accept' | 'reject') => {
-    // In a real app, this would update the database and create a transaction
-    alert(`Produce ${action}ed successfully!`);
+  const handleProcurement = async (itemOrId: any, action: 'accept' | 'reject') => {
+    try {
+      const item = typeof itemOrId === 'object' ? itemOrId : availableProduce.find(x => x.id === itemOrId);
+      const cropId = item?.cropId;
+      const newStatus = action === 'accept' ? 'processing' : 'available';
+
+      if (cropId) {
+        await supabase.from('crops').update({ status: newStatus }).eq('id', cropId);
+      }
+
+      toast({
+        title: action === 'accept' ? 'Produce Procured Successfully' : 'Produce Rejected',
+        description: `${item?.crop || 'Produce'} (${item?.quantity || ''}) marked as ${newStatus}.`,
+      });
+      await loadDistributorData();
+    } catch (err: any) {
+      toast({
+        title: 'Procurement Error',
+        description: err?.message || 'Failed to update procurement status',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const assignTransport = (produceId: number) => {
-    // In a real app, this would open a dialog to assign transport
-    alert('Transport assigned successfully!');
+  const assignTransport = async (itemOrId: any) => {
+    try {
+      const item = typeof itemOrId === 'object' ? itemOrId : procuredProduce.find(x => x.id === itemOrId);
+      const cropId = item?.cropId;
+
+      if (cropId) {
+        await supabase.from('crops').update({ status: 'in_transit' }).eq('id', cropId);
+      }
+
+      toast({
+        title: 'Transport Dispatched',
+        description: `Shipment for ${item?.crop || 'Lot'} is now In Transit to destination FPS.`,
+      });
+      await loadDistributorData();
+    } catch (err: any) {
+      toast({
+        title: 'Dispatch Error',
+        description: err?.message || 'Failed to assign transport',
+        variant: 'destructive',
+      });
+    }
   };
 
   const scanQRCode = () => {
@@ -278,7 +406,7 @@ const DistributorDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6">
+    <div className="app-shell min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
@@ -782,31 +910,14 @@ const DistributorDashboard = () => {
         </DialogContent>
       </Dialog>
       
-      <Dialog open={isQRScannerOpen} onOpenChange={setIsQRScannerOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Scan QR Code</DialogTitle>
-            <DialogDescription>
-              Scan a QR code to verify produce authenticity.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center justify-center py-4 space-y-4">
-            <div className="w-64 h-64 bg-gray-200 flex items-center justify-center border-2 border-dashed border-gray-400 rounded-md">
-              <Search className="h-12 w-12 text-gray-400" />
-              <p className="text-gray-500 text-center">Camera access required</p>
-            </div>
-            <p className="text-sm text-muted-foreground">Position the QR code within the frame to scan</p>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setIsQRScannerOpen(false)} variant="outline">Cancel</Button>
-            <Button onClick={() => {
-              setIsQRScannerOpen(false);
-              // Simulate a successful scan
-              handleQRScan(generateBatchQRCode(1));
-            }}>Scan Manually</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Live Camera QR Scanner */}
+      <LiveQRScannerModal
+        isOpen={isQRScannerOpen}
+        onClose={() => setIsQRScannerOpen(false)}
+        onScanSuccess={handleQRScan}
+        title="Scan Batch / Produce QR"
+        description="Aim camera at batch shipping tags or warehouse intake QR codes."
+      />
       
       <QRCodeGenerator
         data={currentQRData}

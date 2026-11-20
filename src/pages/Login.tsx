@@ -48,7 +48,7 @@ const Login = () => {
       
       toast({
         title: "Login successful!",
-        description: "Welcome back to Harvest Link Chain",
+        description: "Welcome back to Harvestlink",
       });
       
       // Redirect to dashboard or home page
@@ -65,7 +65,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
+    <div className="harvest-auth min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link
@@ -79,7 +79,7 @@ const Login = () => {
             Welcome Back
           </h1>
           <p className="text-gray-600">
-            Sign in to your Harvest Link Chain account
+            Sign in to your Harvestlink account
           </p>
         </div>
 

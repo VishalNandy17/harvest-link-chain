@@ -1,4 +1,4 @@
-// Custom Service Worker for Harvest Link Chain PWA
+// Custom Service Worker for Harvestlink PWA
 import { precacheAndRoute } from 'workbox-precaching';
 
 // This will be replaced by Workbox with the actual manifest

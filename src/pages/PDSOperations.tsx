@@ -21,9 +21,13 @@ import {
   generatePdsLotQRCode,
   transferPdsCustody,
 } from '@/lib/blockchain';
-import { AlertTriangle, ArrowLeftRight, Boxes, ClipboardCheck, KeyRound, Loader2, PackageCheck, Search, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, ArrowLeftRight, Boxes, ClipboardCheck, KeyRound, Loader2, PackageCheck, Search, ShieldAlert, Scale, WifiOff, FileCheck, BrainCircuit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { QRCodeGenerator } from '@/components/QRCodeGenerator';
+import { ReconciliationTab } from '@/components/pds/ReconciliationTab';
+import { OfflineQueueTab } from '@/components/pds/OfflineQueueTab';
+import { EvidenceTab } from '@/components/pds/EvidenceTab';
+import { GatAnalyticsTab } from '@/components/pds/GatAnalyticsTab';
 
 const digest = (action: string, value: Record<string, unknown>) =>
   ethers.sha256(ethers.toUtf8Bytes(JSON.stringify({ schema: 'harvestlink.pds.action.v1', action, ...value })));
@@ -85,7 +89,7 @@ const PDSOperations = () => {
   }
 
   return (
-    <main className="container mx-auto max-w-5xl space-y-6 px-4 py-8">
+    <main className="trace-shell container mx-auto max-w-5xl space-y-6 px-4 py-8">
       <header>
         <p className="text-sm font-semibold uppercase tracking-wide text-primary">Ethereum PDS operations</p>
         <h1 className="mt-2 text-3xl font-bold">Commodity custody and distribution</h1>
@@ -133,12 +137,24 @@ const PDSOperations = () => {
       </Card>}
 
       <Tabs defaultValue="custody">
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 md:grid-cols-5">
+        <TabsList className="grid h-auto w-full grid-cols-3 gap-1 md:grid-cols-9">
           <TabsTrigger value="custody">Custody</TabsTrigger>
           <TabsTrigger value="warehouse">Warehouse</TabsTrigger>
           <TabsTrigger value="allocation">Allocation</TabsTrigger>
           <TabsTrigger value="redemption">Redemption</TabsTrigger>
-          <TabsTrigger value="verify">Verify / Recall</TabsTrigger>
+          <TabsTrigger value="verify">Verify/Recall</TabsTrigger>
+          <TabsTrigger value="reconciliation" className="flex items-center gap-1">
+            <Scale className="h-3.5 w-3.5" /> Recon (G1)
+          </TabsTrigger>
+          <TabsTrigger value="offline" className="flex items-center gap-1">
+            <WifiOff className="h-3.5 w-3.5" /> Offline (G2)
+          </TabsTrigger>
+          <TabsTrigger value="evidence" className="flex items-center gap-1">
+            <FileCheck className="h-3.5 w-3.5" /> Evidence (G3)
+          </TabsTrigger>
+          <TabsTrigger value="gat" className="flex items-center gap-1">
+            <BrainCircuit className="h-3.5 w-3.5" /> GAT AI (VI)
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="custody">
@@ -248,6 +264,22 @@ const PDSOperations = () => {
               }}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Recall lot on chain</Button></CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="reconciliation">
+          <ReconciliationTab />
+        </TabsContent>
+
+        <TabsContent value="offline">
+          <OfflineQueueTab />
+        </TabsContent>
+
+        <TabsContent value="evidence">
+          <EvidenceTab />
+        </TabsContent>
+
+        <TabsContent value="gat">
+          <GatAnalyticsTab />
         </TabsContent>
       </Tabs>
 

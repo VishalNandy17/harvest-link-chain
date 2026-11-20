@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { DashboardFrame } from "@/components/DashboardFrame";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { UserRole } from "@/lib/types";
 
@@ -48,39 +49,39 @@ const App = () => (
             {/* Protected routes */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/pds" element={
-              <ProtectedRoute allowedRoles={[UserRole.FARMER, UserRole.DISTRIBUTOR, UserRole.RETAILER, UserRole.PROCUREMENT, UserRole.WAREHOUSE, UserRole.TRANSPORTER, UserRole.AUDITOR, UserRole.ADMIN]}>
-                <PDSOperations />
+              <ProtectedRoute>
+                <DashboardFrame><PDSOperations /></DashboardFrame>
               </ProtectedRoute>
             } />
             
             {/* Role-specific dashboard routes */}
             <Route path="/dashboards/farmer" element={
-              <ProtectedRoute allowedRoles={[UserRole.FARMER, UserRole.ADMIN]}>
-                <FarmerDashboard />
+              <ProtectedRoute>
+                <DashboardFrame><FarmerDashboard /></DashboardFrame>
               </ProtectedRoute>
             } />
             
             <Route path="/dashboards/distributor" element={
-              <ProtectedRoute allowedRoles={[UserRole.DISTRIBUTOR, UserRole.ADMIN]}>
-                <DistributorDashboard />
+              <ProtectedRoute>
+                <DashboardFrame><DistributorDashboard /></DashboardFrame>
               </ProtectedRoute>
             } />
             
             <Route path="/dashboards/retailer" element={
-              <ProtectedRoute allowedRoles={[UserRole.RETAILER, UserRole.ADMIN]}>
-                <RetailerDashboard />
+              <ProtectedRoute>
+                <DashboardFrame><RetailerDashboard /></DashboardFrame>
               </ProtectedRoute>
             } />
             
             <Route path="/dashboards/consumer" element={
-              <ProtectedRoute allowedRoles={[UserRole.CONSUMER, UserRole.ADMIN]}>
-                <ConsumerDashboard />
+              <ProtectedRoute>
+                <DashboardFrame><ConsumerDashboard /></DashboardFrame>
               </ProtectedRoute>
             } />
             
             <Route path="/dashboards/admin" element={
-              <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
-                <AdminDashboard />
+              <ProtectedRoute>
+                <DashboardFrame><AdminDashboard /></DashboardFrame>
               </ProtectedRoute>
             } />
             

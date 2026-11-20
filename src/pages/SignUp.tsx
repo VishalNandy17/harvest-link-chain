@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, Lock, Mail, User, ArrowLeft, CheckCircle, XCircle, Users } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, User, ArrowLeft, CheckCircle, Circle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,6 +67,8 @@ const SignUp = () => {
   };
 
   const passwordStrength = getPasswordStrength(password);
+  const strengthLevel = !password ? "empty" : passwordStrength.score <= 2 ? "low" : passwordStrength.score === 3 ? "medium" : passwordStrength.score === 4 ? "high" : "excellent";
+  const strengthLabel = { empty: "Add a password", low: "Needs work", medium: "Fair", high: "Strong", excellent: "Excellent" }[strengthLevel];
 
   const onSubmit = async (data: SignUpFormData) => {
     setIsLoading(true);
@@ -88,7 +90,7 @@ const SignUp = () => {
       
       toast({
         title: "Account created successfully!",
-        description: `Welcome to KrishiSetu. Please check your email to verify your account.`,
+        description: `Welcome to Harvestlink. Please check your email to verify your account.`,
       });
       
       // Redirect to login page
@@ -105,7 +107,7 @@ const SignUp = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
+    <div className="harvest-auth min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link
@@ -116,7 +118,7 @@ const SignUp = () => {
             Back to Home
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Join KrishiSetu
+            Join Harvestlink
           </h1>
           <p className="text-gray-600">
             Create your account to start your blockchain-powered agricultural journey
@@ -217,47 +219,24 @@ const SignUp = () => {
                   </button>
                 </div>
                 
-                {/* Password strength indicator */}
-                {password && (
-                  <div className="space-y-2">
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((level) => (
-                        <div
-                          key={level}
-                          className={`h-2 flex-1 rounded-full transition-all duration-200 ${
-                            level <= passwordStrength.score
-                              ? level <= 2
-                                ? "bg-red-500"
-                                : level <= 3
-                                ? "bg-yellow-500"
-                                : level <= 4
-                                ? "bg-blue-500"
-                                : "bg-green-500"
-                              : "bg-gray-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      {Object.entries(passwordStrength.checks).map(([key, value]) => (
-                        <div key={key} className="flex items-center gap-1">
-                          {value ? (
-                            <CheckCircle className="w-3 h-3 text-green-500" />
-                          ) : (
-                            <XCircle className="w-3 h-3 text-gray-400" />
-                          )}
-                          <span className={value ? "text-green-600" : "text-gray-500"}>
-                            {key === "length" && "8+ characters"}
-                            {key === "lowercase" && "Lowercase"}
-                            {key === "uppercase" && "Uppercase"}
-                            {key === "number" && "Number"}
-                            {key === "special" && "Special char"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                <div className={`signup-strength signup-strength--${strengthLevel}`}>
+                  <div className="signup-strength__top">
+                    <span>Password strength</span>
+                    <strong aria-live="polite">{strengthLabel}</strong>
                   </div>
-                )}
+                  <div className="signup-strength__meter" role="progressbar" aria-label="Password strength" aria-valuemin={0} aria-valuemax={5} aria-valuenow={passwordStrength.score}>
+                    {[1, 2, 3, 4, 5].map((level) => <span key={level} className={level <= passwordStrength.score ? "is-filled" : ""} />)}
+                  </div>
+                  <p className="signup-strength__hint">Use at least 8 characters and include:</p>
+                  <div className="signup-strength__checks">
+                    {Object.entries(passwordStrength.checks).map(([key, value]) => (
+                      <div key={key} className={value ? "is-met" : ""}>
+                        {value ? <CheckCircle aria-hidden="true" /> : <Circle aria-hidden="true" />}
+                        <span>{key === "length" ? "8+ characters" : key === "lowercase" ? "Lowercase letter" : key === "uppercase" ? "Uppercase letter" : key === "number" ? "Number" : "Symbol"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 
                 {errors.password && (
                   <p className="text-sm text-red-600">{errors.password.message}</p>

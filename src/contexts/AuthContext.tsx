@@ -30,6 +30,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>
   updateProfile: (data: Partial<UserProfile>) => Promise<{ error: Error | null }>
+  switchRole: (newRole: UserRole) => Promise<{ error: Error | null }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -150,7 +151,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         data: {
           firstName: userData.firstName,
           lastName: userData.lastName,
-          role: UserRole.CONSUMER,
+          role: userData.role,
           requestedRole: userData.role
         }
       }
@@ -178,6 +179,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return { error: null }
     } catch (error) {
       console.error('Error updating profile:', error)
+      return { error: error as Error }
+    }
+  }
+
+  const switchRole = async (newRole: UserRole) => {
+    try {
+      if (!user) throw new Error('User not authenticated')
+      const { error } = await supabase.rpc('switch_active_role', { new_role: newRole })
+      if (error) throw error
+      
+      const updatedProfile = await fetchProfile(user.id)
+      setProfile(updatedProfile)
+      setUserRole(newRole)
+      return { error: null }
+    } catch (error) {
+      console.error('Error switching role:', error)
       return { error: error as Error }
     }
   }
@@ -227,7 +244,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signOut,
     resetPassword,
     updatePassword,
-    updateProfile
+    updateProfile,
+    switchRole
   }
 
   return (

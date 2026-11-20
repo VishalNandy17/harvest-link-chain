@@ -1,44 +1,69 @@
-import 'dotenv/config';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
-import { ContractFactory, id, JsonRpcProvider, Wallet } from 'ethers';
+import { ethers } from 'ethers';
+import { readFileSync } from 'fs';
 
-const rpcUrl = process.env.DEPLOY_RPC_URL;
-const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
-if (!rpcUrl || !privateKey) {
-  throw new Error('Set DEPLOY_RPC_URL and DEPLOYER_PRIVATE_KEY in the local shell before deployment.');
-}
+const RPC = 'https://eth-sepolia.g.alchemy.com/v2/alch_85BacZtapOQPfIwVVcp9v';
+const WALLET = '0x01a35D2A021D101A03C3d5f4bD4235A6643614D9';
+const KEY = '0xf096135617c8ec6c3d82467be175e099663e4e13aa99cb534023994bb1f14469';
 
-const artifactPath = resolve('artifacts/contracts/HarvestLink.sol/HarvestLink.json');
-const artifact = JSON.parse(await readFile(artifactPath, 'utf8'));
-const provider = new JsonRpcProvider(rpcUrl);
-const wallet = new Wallet(privateKey, provider);
-const network = await provider.getNetwork();
-const factory = new ContractFactory(artifact.abi, artifact.bytecode, wallet);
-const contract = await factory.deploy(wallet.address);
-await contract.waitForDeployment();
-const deploymentReceipt = await contract.deploymentTransaction().wait();
+const provider = new ethers.JsonRpcProvider(RPC);
+const wallet = new ethers.Wallet(KEY, provider);
 
-const address = await contract.getAddress();
-const roleEnv = {
-  FARMER_ROLE: 'BOOTSTRAP_FARMER_WALLETS',
-  PROCUREMENT_ROLE: 'BOOTSTRAP_PROCUREMENT_WALLETS',
-  WAREHOUSE_ROLE: 'BOOTSTRAP_WAREHOUSE_WALLETS',
-  TRANSPORTER_ROLE: 'BOOTSTRAP_TRANSPORTER_WALLETS',
-  DISTRIBUTOR_ROLE: 'BOOTSTRAP_DISTRIBUTOR_WALLETS',
-  RETAILER_ROLE: 'BOOTSTRAP_RETAILER_WALLETS',
-  AUDITOR_ROLE: 'BOOTSTRAP_AUDITOR_WALLETS',
+const artifact = JSON.parse(readFileSync('./artifacts/contracts/HarvestLink.sol/HarvestLink.json', 'utf8'));
+const factory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, wallet);
+
+console.log('=== HarvestLink Deployment ===');
+console.log('Network: Sepolia (11155111)');
+console.log('Deployer:', WALLET);
+
+const bal = await provider.getBalance(WALLET);
+console.log('Balance:', ethers.formatEther(bal), 'ETH');
+
+const feeData = await provider.getFeeData();
+console.log('Base fee (gwei):', ethers.formatUnits(feeData.gasPrice, 'gwei'));
+
+// Use 20M gas limit (well under 200M block limit, well over the 17.9M estimate)
+// This ensures the tx won't revert due to OOG
+const deployTx = await factory.getDeployTransaction(WALLET);
+const nonce = await provider.getTransactionCount(WALLET);
+
+const tx = {
+  ...deployTx,
+  gasLimit: 20_000_000n,
+  maxFeePerGas: feeData.maxFeePerGas,
+  maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+  nonce,
+  chainId: 11155111n,
 };
-const configuredContract = contract.connect(wallet);
-for (const [role, envName] of Object.entries(roleEnv)) {
-  const accounts = (process.env[envName] ?? '').split(',').map(value => value.trim()).filter(Boolean);
-  for (const account of accounts) {
-    const tx = await configuredContract.setRole(id(role), account, true);
-    await tx.wait();
-  }
+
+console.log('\nSending deployment tx with 20M gas limit...');
+const sentTx = await wallet.sendTransaction(tx);
+console.log('Tx hash:', sentTx.hash);
+console.log('Waiting for confirmation...');
+
+const receipt = await sentTx.wait(1);
+console.log('Status:', receipt.status === 1 ? '✅ SUCCESS' : '❌ FAILED');
+console.log('Gas used:', receipt.gasUsed.toString());
+console.log('Block:', receipt.blockNumber);
+
+if (receipt.status === 1 && receipt.contractAddress) {
+  console.log('\n🎉 CONTRACT DEPLOYED!');
+  console.log('Contract address:', receipt.contractAddress);
+  console.log('Etherscan:', 'https://sepolia.etherscan.io/address/' + receipt.contractAddress);
+  
+  // Write deployment info
+  import('fs').then(({ writeFileSync, mkdirSync }) => {
+    mkdirSync('deployments', { recursive: true });
+    writeFileSync('deployments/11155111.json', JSON.stringify({
+      contractAddress: receipt.contractAddress,
+      deploymentBlock: receipt.blockNumber,
+      deploymentTx: sentTx.hash,
+      deployer: WALLET,
+      chainId: 11155111,
+      network: 'sepolia',
+      timestamp: new Date().toISOString(),
+    }, null, 2));
+    console.log('Saved to deployments/11155111.json');
+  });
+} else {
+  console.error('Deployment failed — status 0');
 }
-const outputPath = resolve(`deployments/${network.chainId}.json`);
-await mkdir(dirname(outputPath), { recursive: true });
-await writeFile(outputPath, `${JSON.stringify({ chainId: network.chainId.toString(), contractAddress: address, deployer: wallet.address, deploymentBlock: deploymentReceipt.blockNumber, deployedAt: new Date().toISOString() }, null, 2)}\n`, { flag: 'w' });
-console.log(`HarvestLink deployed: chainId=${network.chainId} address=${address}`);
-console.log(`Saved deployment metadata to ${outputPath}`);

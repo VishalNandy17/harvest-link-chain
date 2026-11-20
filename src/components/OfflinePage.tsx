@@ -8,7 +8,7 @@ export const OfflinePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+    <div className="app-shell min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <div className="text-center">
         <div className="mx-auto h-24 w-24 text-gray-400 mb-6">
           <WifiOff className="h-full w-full" />
@@ -32,7 +32,7 @@ export const OfflinePage: React.FC = () => {
         </Button>
         
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-          HarvestChain works offline for basic features
+          Harvestlink works offline for basic features
         </p>
       </div>
     </div>

@@ -1,5 +1,5 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "harvestlink",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "chain:compile": "node scripts/compile-contract.mjs && node scripts/sync-contract-abi.mjs",
     "chain:deploy": "npm run chain:compile && node scripts/deploy-contract.mjs",
-    "chain:abi": "node scripts/sync-contract-abi.mjs"
+    "chain:abi": "node scripts/sync-contract-abi.mjs",
+    "db:seed": "node scripts/seed-research-data.mjs",
+    "db:purge": "node scripts/purge-demo-data.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -53,6 +55,7 @@
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
     "ethers": "^6.15.0",
+    "html5-qrcode": "^2.3.8",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",

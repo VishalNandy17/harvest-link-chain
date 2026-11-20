@@ -1,8 +1,8 @@
 {
-  "name": "KrishiSetu",
-  "short_name": "KrishiSetu",
-  "description": "Blockchain-powered harvest management system",
-  "theme_color": "#16a34a",
+  "name": "Harvestlink",
+  "short_name": "Harvestlink",
+  "description": "Follow every harvest from field to table with clear, verified supply chain records.",
+  "theme_color": "#285f45",
   "background_color": "#ffffff",
   "display": "standalone",
   "start_url": "/",

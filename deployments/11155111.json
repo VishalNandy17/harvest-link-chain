@@ -1,0 +1,9 @@
+{
+  "contractAddress": "0x9E9a23A7a549F569e36ae1594e5C1A34397d9A0B",
+  "deploymentBlock": 12173724,
+  "deploymentTx": "0xeee0867db7d9306e514acff55b328ae690cf0ddade381f4fe380683c3b80bb34",
+  "deployer": "0x01a35D2A021D101A03C3d5f4bD4235A6643614D9",
+  "chainId": 11155111,
+  "network": "sepolia",
+  "timestamp": "2026-11-20T06:58:50.111Z"
+}

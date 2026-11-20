@@ -38,7 +38,7 @@ const PDSLotDetails = () => {
   }, [lotId]);
 
   return (
-    <main className="container mx-auto max-w-4xl space-y-6 px-4 py-10">
+    <main className="trace-shell container mx-auto max-w-4xl space-y-6 px-4 py-10">
       <header>
         <p className="text-sm font-semibold uppercase tracking-wide text-primary">Public Ethereum lot record</p>
         <h1 className="mt-2 text-3xl font-bold">Food commodity trace</h1>
