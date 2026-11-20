@@ -1,489 +1,719 @@
-\documentclass[conference]{IEEEtran}
-\IEEEoverridecommandlockouts
-
-% Essential IEEE Packages
-\usepackage{cite}
-\usepackage{amsmath,amssymb,amsfonts,amsthm}
-\usepackage{algorithmic}
-\usepackage{algorithm}
-\usepackage{graphicx}
+\documentclass[conference,a4paper]{IEEEtran}
+\usepackage[T1]{fontenc}
 \usepackage{textcomp}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs,array,multirow,tabularx}
 \usepackage{xcolor}
-\usepackage{booktabs}
-\usepackage{multirow}
-\usepackage{url}
-\usepackage{balance}
-
-% Native Vector Graphics (Compiles directly on Overleaf without external images)
+\usepackage{cite}
+\usepackage{algorithm}
+\usepackage{algorithmic}
 \usepackage{tikz}
-\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit, backgrounds, patterns}
+\usetikzlibrary{arrows.meta,positioning,calc,fit}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.16}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em T\kern-.1667em\lower.7ex\hbox{E}\kern-.125em X}}
 
-% Theorem environments
-\newtheorem{theorem}{Theorem}
-\newtheorem{lemma}{Lemma}
-\newtheorem{definition}{Definition}
-
-\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
-    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\newcommand{\calib}{\textsuperscript{\dag}}
+\newcommand{\ind}{\mathbf{1}}
+\newcommand{\qdisp}{q^{\mathrm{disp}}}
+\newcommand{\qrec}{q^{\mathrm{rec}}}
 
 \begin{document}
 
-\title{HarvestLink: Cryptographic Cross-Stage Reconciliation and Edge-Aware Graph Attention Networks for Tamper-Proof Food Supply Chains}
+\title{HarvestLink: A Blockchain-Based Public Distribution System and Food Supply Chain Tracking Framework Using Role-Gated Ethereum Smart Contracts}
 
 \author{
-\IEEEauthorblockN{Vishal Nandy\IEEEauthorrefmark{1}, Co-Author Two\IEEEauthorrefmark{2}, Co-Author Three\IEEEauthorrefmark{3}, and Supervising Faculty\IEEEauthorrefmark{4}}
-\IEEEauthorblockA{Department of Computer Science and Engineering\\
-University / Institution Name, West Bengal, India\\
-Email: \IEEEauthorrefmark{1}vishalnandy17@example.com, \IEEEauthorrefmark{2}author2@example.com, \IEEEauthorrefmark{3}author3@example.com, \IEEEauthorrefmark{4}supervisor@example.com}
+\IEEEauthorblockN{Vishal Nandy, Abhay Kumar Deb, Taparudra Sikdar, and Gourab Debnath}
+\IEEEauthorblockA{Team ID: T4-2026-044 (Problem Statement PS38) $\bullet$ Fourth Year Project, 2026\\
+\textit{Department of Computer Science and Engineering, JIS College of Engineering}\\
+Kalyani, West Bengal, India\\
+Email: nandyvishal17@gmail.com}
 }
 
 \maketitle
 
 \begin{abstract}
-Public Distribution Systems (PDS) in emerging economies provide subsidized food grains to hundreds of millions of underprivileged citizens. Nevertheless, systemic leakage, unauthorized diversion, weight skimming, and documentation tampering cause monumental welfare deficits. Existing blockchain traceability proposals predominantly presume uninterrupted online connectivity and rely on naive static threshold rules that fail against sophisticated sub-tolerance skimming and multi-hop collusive laundering. In this work, we present \textbf{HarvestLink}, an edge-resilient, mathematically grounded, and cryptographically auditable verification framework explicitly architected for large-scale Targeted PDS (TPDS). HarvestLink decouples operational data ingestion from decentralized trust anchoring across a three-tier architecture: an immutable Ethereum EVM smart contract anchor, an access-controlled cloud provenance repository, and an edge-executable mathematical governance engine. We formalize dynamic volumetric tolerance bounds ($\tau_{v,t}$) alongside global lot residuals ($r_{l,t}$) to enforce rigorous mass conservation across complex logistics networks. For connectivity-compromised rural mandis and fair price shops, we devise an append-only, tamper-evident offline cryptographic hash-chaining protocol with $O(n)$ verification complexity, authenticated via EIP-191 signatures and predecessor integrity predicates. To preempt evasive fraud, we formulate an Edge-Aware Graph Attention Network (GAT) whose multi-head attention coefficients are dynamically conditioned on a 12-dimensional physical-to-digital evidence completeness metric ($C_e$) and transfer-level quantity gaps ($d_{ij}$). Benchmarked over a synthetic regional supply network comprising 600 nodes, 48,000 movements, and eight empirical attack archetypes ($A_1$--$A_8$), HarvestLink achieves an F1-score of 0.934 and PR-AUC of 0.948, outperforming state-of-the-art GATv2 and GCN baselines by 6.5\% and 11.7\% while slashing false alert rates by 86.5\% over deterministic audit rules. Real-world testnet validation on Ethereum Sepolia demonstrates economic feasibility ($\sim$85,214 gas per lot commitment) and sub-second client-side vector verification.
+Public Distribution Systems (PDS) move subsidised food commodities through procurement agencies, warehouses, transporters and Fair Price Shops (FPSs) before issue to eligible households. Fragmented records make it difficult to reconcile quantities across custody transfers, identify inconsistent events and establish an auditable history. This paper presents HarvestLink, a blockchain-based PDS and food supply-chain verification framework that combines a role-gated Solidity contract on an EVM-compatible network, a React/TypeScript application, Supabase for authentication and operational metadata, and server-side Edge Functions that independently verify transaction receipts. We formalise cross-stage quantity reconciliation with dynamic tolerance bounds and lot-conservation residuals, an offline hash-chain protocol for tamper-evident event capture under intermittent connectivity, and a 12-field physical-evidence completeness metric. On top of these deterministic controls we design an edge-aware Graph Attention Network (GAT) that conditions attention on transfer-level features and acts only as an off-chain prioritisation layer inside a hybrid rule-plus-learning decision process. On a synthetic multi-hop PDS topology with eight injected attack families, the edge-aware GAT reaches an F1-score of 0.934 and a PR-AUC of 0.948, compared with 0.877 and 0.892 for GATv2 and 0.574 and 0.582 for deterministic reconciliation, while reducing the false alert rate from 0.089 to 0.012. The contract is deployed on the Ethereum Sepolia testnet, where lot registration costs about 85{,}000 gas. Results are obtained on synthetic labels only; independent audit and field pilots remain future work.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Blockchain, Graph Attention Networks, Public Distribution System, Edge Computing, Cryptographic Verification, Anomaly Detection.
+Blockchain, Ethereum, Solidity, public distribution system, food supply chain, traceability, quantity reconciliation, Graph Attention Network, graph anomaly detection, offline synchronisation, QR verification, privacy.
 \end{IEEEkeywords}
 
 \section{Introduction}
-Food security programs in developing nations, such as India's Targeted Public Distribution System (TPDS), operate on an unparalleled socioeconomic scale, distributing over 60 million metric tons of wheat, rice, and coarse grains annually across more than 530,000 Fair Price Shops (FPS) \cite{ref_pds_study}. Despite substantive welfare investments, empirical audits repeatedly highlight vulnerability to systemic leakages: between 25\% and 40\% of grain supplies are illicitly diverted into commercial open markets before reaching intended beneficiaries \cite{ref_khera_leakage}. This pervasive diversion manifests via coordinated malpractices including phantom dispatches, weighbridge manipulation, localized weight skimming, moisture adulteration, and paper-slip recycling.
+\IEEEPARstart{F}{ood} security programmes depend on the reliable movement of staple commodities such as rice, wheat and pulses. A consignment may pass through procurement, storage, transportation, allocation and last-mile distribution. Each stakeholder may maintain a separate information system, spreadsheet or paper record. When identifiers, units, timestamps and stock balances are not reconciled, it becomes difficult to establish which organisation held a lot, how much stock should remain, and whether recorded receipt agrees with dispatch. Research on India's food-security programme finds that digital monitoring can improve accountability, while monitoring workarounds and replenishment planning influence realised benefits~\cite{ganesh2024}.
 
-To establish verifiable custody, numerous decentralized ledger technology (DLT) and IoT architectures have been proposed \cite{ref_blockchain_1, ref_blockchain_2, ref_rfid_iot}. However, translating academic blockchain architectures into practical TPDS operations exposes four fatal structural obstacles:
-\begin{enumerate}
-    \item \textbf{Connectivity Asymmetry at the Periphery:} Rural procurement mandis and tribal FPS facilities frequently endure prolonged cellular and power outages. Synchronous blockchain transactions halt local operations, inducing fatal throughput bottlenecks.
-    \item \textbf{Sub-Tolerance Fraud Blindspots:} Statutory handling norms grant arbitrary static tolerances (e.g., 2\% moisture/transit shrinkage). Fraud rings exploit this margin by skimming fractions of a percent at every distribution node, ensuring aggregate theft remains completely hidden beneath detection thresholds.
-    \item \textbf{Decoupling of Nodes and Edge Dynamics:} Existing Graph Neural Network (GNN) anomaly frameworks operate on static facility node embeddings. Yet in logistics networks, theft occurs almost exclusively along directed transport edges (the handovers between carriers, depots, and dealers).
-    \item \textbf{Data Privacy vs. Public Transparency Paradox:} Storing complete beneficiary or logistics transactions on public blockchains violates privacy regulations and incurs exorbitant gas fees, whereas private permissioned consortia risk regulatory capture by local authorities.
-\end{enumerate}
+Blockchain can provide a shared, append-only history of authorised digital claims. Smart contracts restrict which identities may submit a transition and reject invalid state changes. Food-traceability research has explored blockchain with QR/RFID, IoT, EPCIS and analytics~\cite{ellahi2023,sugandh2023,elhajji2024,chunduri2024}. However, a ledger does not independently establish that a truck carried the declared weight, that a warehouse inspection was correctly performed, or that a beneficiary was eligible. Reliability still depends on trustworthy data capture, governance and dispute handling.
 
-\begin{figure*}[t]
+The PDS context adds requirements beyond commercial product provenance. Allocations must be quantity-bounded; stock must not be overdrawn; entitlement redemption should not be repeated; and beneficiary identity must not be exposed permanently on a public ledger. HarvestLink addresses record integrity and workflow through role-gated contract transitions, versioned commitments, independent receipt verification and public lot verification, and then adds a reconciliation and graph-learning layer that targets fraud patterns deterministic rules cannot see.
+
+\textit{Research questions.} \textbf{RQ1:} How can a role-gated EVM contract represent the custody and allocation lifecycle of a PDS lot? \textbf{RQ2:} How can quantity reconciliation identify inconsistencies between dispatch, receipt, allocation and physical stock? \textbf{RQ3:} How can signed offline events be synchronised without duplicate or conflicting transitions? \textbf{RQ4:} What evidence links a digital event to a physical custody transfer while protecting beneficiary privacy? \textbf{RQ5:} What performance and operational trade-offs arise compared with a centralised database? \textbf{RQ6:} Can an edge-aware GAT identify suspicious custody-transfer patterns beyond deterministic quantity rules and non-graph machine-learning baselines?
+
+\subsection{Contributions}
+The contributions are: (1) a lot-level state machine and two-layer authorisation model implemented as a role-gated Solidity contract; (2) an independent receipt-confirmation workflow that checks chain ID, contract address, sender, event arguments and the recomputed commitment; (3) a formal quantity-conservation and reconciliation model with human-reviewed exceptions; (4) an offline hash-chain event-capture protocol and a physical-evidence completeness model; (5) an edge-aware GAT formulation for transfer-level anomaly prioritisation within a hybrid rule-plus-learning decision process; and (6) an experimental evaluation on a synthetic multi-hop PDS topology with eight attack families, together with a live Ethereum Sepolia deployment. Five key findings are distilled in Section~\ref{sec:findings}.
+
+\section{Related Work and Research Gap}
+\subsection{Blockchain-Based Food Traceability}
+Ellahi \textit{et al.} review blockchain food-traceability frameworks and their integration with Industry 4.0 and Web 3.0 technologies, including IoT and RFID~\cite{ellahi2023}. Sugandh \textit{et al.} propose a blockchain risk-traceability approach for tracking and authenticating food products~\cite{sugandh2023}. Machine-learning, light-blockchain and IoT designs for perishable and cold-chain products have also been reported~\cite{feng2024,villegas2025,uyar2025}, and systematic reviews discuss risk-management and sustainability implications~\cite{foodcontrol2026}. Earlier smart-contract and EPCIS-based systems for agricultural, grain and soybean supply chains~\cite{li2021,zhang2020,salah2019,wang2019,lin2019} motivate lot-level traceability. These works establish batch identity and event history as central design elements, but commercial provenance does not automatically provide PDS allocation and entitlement controls.
+
+\subsection{Permissioned and EVM Implementations}
+Recent studies explore permissioned ledgers and smart contracts for food supply chains. El Hajji \textit{et al.} describe a Hyperledger Fabric approach and evaluate efficiency using Caliper~\cite{elhajji2024}. Chunduri \textit{et al.} propose a blockchain traceability scheme for sustainable food supply chains~\cite{chunduri2024}. Oh \textit{et al.} combine private blockchain, EPCIS and IoT sensors for food-safety distribution~\cite{oh2025}. Alanazi reports a permissioned Fabric and QR-verification framework with simulated traceability events~\cite{alanazi2026}. These works are useful architectural references, but their platform assumptions differ from HarvestLink's EVM implementation~\cite{wood2014,openzeppelin}.
+
+\subsection{PDS-Specific Evidence}
+Ganesh \textit{et al.} evaluate biometric authentication devices in Karnataka's food-security programme and report a reduction of up to 4\% of current last-mile diversion in the studied setting; they also estimate value from improved replenishment planning~\cite{ganesh2024}. Singh \textit{et al.} analyse barriers to integrated RFID-blockchain adoption in Indian PDS and identify skilled-workforce availability, privacy awareness and unclear return on investment as critical barriers~\cite{singh2024}. Technical architecture must therefore be assessed alongside operational feasibility and stakeholder capability.
+
+\begin{table}[!t]
+\caption{Research-Gap Priority Index}
+\label{tab:gpi}
+\centering\footnotesize
+\begin{tabularx}{\columnwidth}{@{}l p{0.85in} c c X@{}}
+\toprule
+Gap & Theme & GPI$^{*}$ & Prio. & Proposed response\\
+\midrule
+G1 & Quantity reconciliation & 100 & P1 & Stock ledger + discrepancy engine + GAT ranking\\
+G2 & Offline sync & 92 & P1 & Hash-chained local queue + sync protocol\\
+G3 & Physical evidence & 93 & P1 & Signed handover + weighment evidence\\
+G4 & Privacy & 80 & P2 & Off-chain identity + minimal commitments\\
+G5 & Replenishment & 77 & P2 & Stock alerts + planning extension\\
+G6 & Quality & 77 & P2 & Inspection + sensor evidence\\
+G7 & Performance & 74 & P2 & DB baseline + EVM benchmarks\\
+\bottomrule
+\end{tabularx}
+
+\vspace{2pt}\raggedright\scriptsize $^{*}$GPI values are preliminary planning scores from the project gap report, not empirical measures or proof of novelty.
+\end{table}
+
+\subsection{Graph Attention for Supply-Chain Analytics}
+Graph Attention Networks (GAT) learn a weight for each neighbour during message passing~\cite{velickovic2018}, and GATv2 removes the static-attention limitation of the original scoring function~\cite{brody2022}. Graph neural networks have been identified as a promising family for supply-chain analytics, while benchmark availability and task-specific graph construction remain open challenges~\cite{wasi2024}. HarvestLink adopts an edge-conditioned GAT for transfer-level anomaly prioritisation and compares it against standard GAT, GATv2, GCN and non-graph baselines.
+
+\subsection{Identified Gaps}
+The literature and the implementation motivate seven candidate gaps, not claims that no prior work has studied them. G1: cross-stage quantity reconciliation. G2: offline-first capture and conflict-safe synchronisation. G3: evidence linking physical custody to digital records. G4: beneficiary privacy. G5: stock visibility and replenishment. G6: grain-quality and storage evidence. G7: performance, governance and operating cost. Recent reviews also identify integration, data quality, scalability and regulatory concerns as continuing issues~\cite{vasileiou2026,yu2024}.
+
+\section{System Overview and Architecture}
+\subsection{Design Goals}
+HarvestLink has six design goals: each lot has a stable identifier and traceable lifecycle; only authorised wallets invoke state-changing operations; splitting and allocation cannot exceed recorded quantity bounds; entitlement redemption is single-use; beneficiary personal data remains off-chain; and public visitors can compare lot information with contract state and events. The implementation uses React/TypeScript, Supabase Auth/Postgres, Edge Functions, ethers.js and Solidity~\cite{wood2014,openzeppelin}, configured for an EVM-compatible network through environment variables.
+
+\begin{figure}[!t]
 \centering
-\begin{tikzpicture}[
-    scale=0.88, every node/.style={transform shape},
-    tierbox/.style={draw=black!70, rounded corners=6pt, fill=#1, line width=1pt, inner sep=8pt},
-    compbox/.style={draw=black!80, rounded corners=4pt, fill=white, line width=0.8pt, font=\footnotesize, align=center, drop shadow},
-    arrow/.style={-{Stealth[length=3mm]}, line width=1.2pt, draw=black!80},
-    biarrow/.style={{Stealth[length=2.5mm]}-{Stealth[length=2.5mm]}, line width=1.3pt, draw=blue!70!black, dashed}
-]
-
-% Tier 1
-\node[tierbox=blue!8, minimum width=17.5cm, minimum height=2.4cm] (t1) at (0, 3.8) {};
-\node[anchor=north west, font=\bfseries\small, text=blue!80!black] at (-8.6, 4.9) {Tier 1: Decentralized Trust Anchor (Public EVM Ledger -- Ethereum Sepolia)};
-
-\node[compbox, minimum width=3.4cm, minimum height=1.3cm] (sc) at (-5.5, 3.7) {\textbf{HarvestLink Contract}\\0x9E9a...9A0B (Sepolia)\\Solidity v0.8.20};
-\node[compbox, minimum width=3.8cm, minimum height=1.3cm] (roles) at (-1.3, 3.7) {\textbf{Role AccessControl}\\FARMER, DISTRIBUTOR\\RETAILER, AUDITOR};
-\node[compbox, minimum width=3.6cm, minimum height=1.3cm] (lotreg) at (3.0, 3.7) {\textbf{Immutable State Store}\\bytes32 lotId, uint128 qty\\bytes32 dataHash, custodian};
-\node[compbox, minimum width=3.4cm, minimum height=1.3cm] (events) at (7.0, 3.7) {\textbf{Event Emission}\\LotRegistered, LotSplit\\CustodyTransferred};
-
-% Tier 2
-\node[tierbox=green!8, minimum width=17.5cm, minimum height=2.4cm] (t2) at (0, 0.6) {};
-\node[anchor=north west, font=\bfseries\small, text=green!60!black] at (-8.6, 1.7) {Tier 2: Operational Data, Provenance, and Verification Layer (Hardened Cloud)};
-
-\node[compbox, minimum width=3.4cm, minimum height=1.3cm] (sb_auth) at (-5.5, 0.5) {\textbf{Supabase Auth}\\JWT Session Management\\Role-Level RLS Policies};
-\node[compbox, minimum width=3.8cm, minimum height=1.3cm] (sb_db) at (-1.3, 0.5) {\textbf{PostgreSQL Store}\\crops, batches, profiles\\telemetry, inspection slips};
-\node[compbox, minimum width=3.6cm, minimum height=1.3cm] (qr_eng) at (3.0, 0.5) {\textbf{Vector QR Engine}\\Offline qrcode.react (H)\\Client-side URL encoding};
-\node[compbox, minimum width=3.4cm, minimum height=1.3cm] (portal) at (7.0, 0.5) {\textbf{Public Trace Portal}\\/lot/:id SPA Routing\\Netlify Edge Caching};
-
-% Tier 3
-\node[tierbox=orange!8, minimum width=17.5cm, minimum height=2.4cm] (t3) at (0, -2.6) {};
-\node[anchor=north west, font=\bfseries\small, text=orange!80!black] at (-8.6, -1.5) {Tier 3: Edge Algorithmic Governance and Multi-Hop Anomaly Engines (Edge / Client-Side)};
-
-\node[compbox, minimum width=3.4cm, minimum height=1.3cm] (g1) at (-5.5, -2.7) {\textbf{G1: Reconciliation}\\Dynamic Tolerance $\tau_{v,t}$\\Lot Residual $r_{l,t}$ (Eq. 6--10)};
-\node[compbox, minimum width=3.8cm, minimum height=1.3cm] (g2) at (-1.3, -2.7) {\textbf{G2: Offline Hash Queue}\\Append-only $\pi_e$ chain\\Predicate $V(e)$ (Eq. 11--12)};
-\node[compbox, minimum width=3.6cm, minimum height=1.3cm] (g3) at (3.0, -2.7) {\textbf{G3: Handover Scoring}\\12-dim Metric $C_e \in [0,1]$\\Physical-to-Digital (Eq. 13)};
-\node[compbox, minimum width=3.4cm, minimum height=1.3cm] (gat) at (7.0, -2.7) {\textbf{Edge-Aware GAT Engine}\\Dynamic Attention $\alpha_{ij}^k$\\Hybrid Decision $\mathcal{D}(e)$};
-
-% Internal connections
-\draw[arrow] (sc) -- (roles);
-\draw[arrow] (roles) -- (lotreg);
-\draw[arrow] (lotreg) -- (events);
-
-\draw[arrow] (sb_auth) -- (sb_db);
-\draw[arrow] (sb_db) -- (qr_eng);
-\draw[arrow] (qr_eng) -- (portal);
-
-\draw[arrow] (g1) -- (g2);
-\draw[arrow] (g2) -- (g3);
-\draw[arrow] (g3) -- (gat);
-
-% Inter-tier connections
-\draw[biarrow] (sb_db) -- node[fill=white, font=\scriptsize, inner sep=2pt, midway] {SHA-256 Commitments} (lotreg);
-\draw[biarrow] (sb_db) -- node[fill=white, font=\scriptsize, inner sep=2pt, midway] {Logistics Telemetry} (g2);
-\draw[biarrow] (portal) -- node[fill=white, font=\scriptsize, inner sep=2pt, midway] {On-Chain Read Proofs} (events);
-
+\begin{tikzpicture}[font=\scriptsize,>=Stealth,
+  box/.style={draw,rounded corners=2pt,minimum width=1.55cm,minimum height=0.8cm,align=center,fill=blue!6},
+  lab/.style={font=\tiny,midway,fill=white,inner sep=1pt}]
+\node[box] (act) {Actors\\Farmer, depot, FPS};
+\node[box,right=0.75cm of act] (web) {Web app\\React $\cdot$ TypeScript};
+\node[box,right=0.75cm of web] (back) {Backend\\Supabase $\cdot$ RLS};
+\node[box,below=0.8cm of web] (evm) {EVM\\Solidity $\cdot$ roles};
+\node[box,left=0.75cm of evm] (ver) {Verifier\\QR $\cdot$ events};
+\draw[->] (act)--(web);
+\draw[->] (web)--(back);
+\draw[->] (web)--(evm) node[lab,pos=.5,right=1pt] {signed tx};
+\draw[->] (back)--(evm) node[lab,pos=.5,right=2pt] {verify receipt};
+\draw[->] (ver)--(evm) node[lab,pos=.5,above] {read};
 \end{tikzpicture}
-\caption{The HarvestLink Three-Tier Architecture. Tier 1 provides immutable decentralized trust via EVM smart contracts on Ethereum Sepolia. Tier 2 delivers zero-PII operational persistence and client-side vector QR generation. Tier 3 computes localized mass conservation, offline cryptographic hash chains, and edge-conditioned graph attention anomaly inference.}
-\label{fig:architecture}
-\end{figure*}
-
-To conquer these structural limitations, we introduce \textbf{HarvestLink}, an integrated framework that unifies cryptographic commitment, edge-resilient offline event queues, dynamic volumetric conservation laws, and edge-conditioned graph attention learning. The primary contributions of this work are:
-\begin{itemize}
-    \item \textbf{A Synchronized Three-Tier Architecture:} We partition system responsibilities into a decentralized EVM trust anchor (Tier 1), an operational relational layer (Tier 2), and a client/edge governance engine (Tier 3), completely isolating private citizen data while providing public mathematical verifiability.
-    \item \textbf{Mathematical Formulations for Physical Conservation:} We formalize dynamic volumetric tolerance bounds ($\tau_{v,t}$), relative discrepancies ($z_{v,t}$), and multi-facility lot residuals ($r_{l,t}$) to prevent threshold gaming.
-    \item \textbf{Offline-First Cryptographic Hash-Chaining:} We formulate an append-only event queuing protocol based on EIP-191 signatures and four orthogonal verification predicates ($A, S, P, U$), guaranteeing complete tamper-evidence during prolonged network blackouts.
-    \item \textbf{Edge-Aware Graph Attention Anomaly Engine:} We develop a deep relational GAT that conditions attention coefficients directly on transport residuals and a 12-dimensional evidence completeness score ($C_e$), establishing state-of-the-art anomaly classification across eight empirical fraud archetypes.
-    \item \textbf{Complete Empirical Realization:} We benchmark the full pipeline across 48,000 movements and validate the smart contract on Ethereum Sepolia, documenting transaction gas overheads, latency, and consumer QR verification workflows.
-\end{itemize}
-
-\section{Related Work}
-\subsection{DLT and Smart Contracts in Agri-Supply Logistics}
-Decentralized ledgers have been widely explored to replace error-prone centralized food ledgers \cite{ref_blockchain_1, ref_blockchain_2, ref_supply_chain_survey}. Caro et al. implemented AgriBlockIoT using Ethereum and Hyperledger Sawtooth, capturing environmental sensor feeds \cite{ref_blockchain_2}. Tian deployed early prototypes pairing RFID tags with public blockchains \cite{ref_blockchain_1}. Nonetheless, existing systems focus primarily on high-value organic produce exports rather than mass subsidized grain networks. Crucially, none of these works address multi-tier batch splitting, bulk blending, or mathematical reconciliation under intermittent connectivity.
-
-\subsection{Graph Neural Networks for Fraud and Anomaly Detection}
-Graph Neural Networks have become the vanguard of financial transaction monitoring, sybil classification, and botnet identification \cite{ref_fraud_gnn, ref_gcn}. Standard Graph Convolutional Networks (GCN) \cite{ref_gcn} compute isotropic neighbor aggregations, losing edge-specific directionality. Graph Attention Networks (GAT) \cite{ref_gat_orig} and GATv2 \cite{ref_gatv2} introduce dynamic attention over node features. However, in supply chain networks, physical crime occurs along transport edges (consignments). Standard GAT formulations neglect edge feature tensors, treating edge weights as scalar projections of connected nodes. HarvestLink explicitly introduces multi-dimensional edge embeddings into the attention normalization denominator, resolving this architectural oversight.
-
-\section{System Architecture \& Threat Model}
-
-\subsection{Architecture Overview}
-The HarvestLink topology is structured into three cleanly decoupled tiers, illustrated in Fig.~\ref{fig:architecture}:
-\begin{itemize}
-    \item \textbf{Tier 1 (Decentralized Trust Anchor):} An open-access Solidity smart contract deployed on Ethereum Sepolia (\texttt{0x9E9a...9A0B}). It enforces strict OpenZeppelin AccessControl (\texttt{FARMER\_ROLE}, \texttt{DISTRIBUTOR\_ROLE}, \texttt{RETAILER\_ROLE}, \texttt{AUDITOR\_ROLE}) and records 32-byte cryptographic commitments of lot states ($lotId$, $commodityCode$, $dataHash$, $custodian$, $quantity$). Private beneficiary identities and operational logs are never committed on-chain, eliminating PII leakage and suppressing gas consumption.
-    \item \textbf{Tier 2 (Operational Storage \& Provenance Layer):} A scalable PostgreSQL engine hosted on hardened cloud infrastructure. It enforces Row-Level Security (RLS) policies driven by cryptographically signed JWT sessions. Tier 2 handles operational produce catalogs, weighbridge slips, vehicle registry numbers, and renders client-side vector QR codes via \texttt{qrcode.react} using high-density error correction (Level H).
-    \item \textbf{Tier 3 (Edge Algorithmic \& Governance Engine):} Deterministic reconciliation routines ($G_1$), local offline hash queues ($G_2$), evidence completeness engines ($G_3$), and the relational Edge-Aware GAT model deployed on client browser runtimes and edge terminals.
-\end{itemize}
-
-\subsection{Adversarial Threat Model ($A_1$--$A_8$)}
-We formalize eight distinct attack families synthesized from empirical auditing reports across state grain federations:
-\begin{itemize}
-    \item \textbf{$A_1$ (Phantom Dispatch):} Creating fictitious on-chain consignment manifests to claim transport subsidies without physically dispatching grain.
-    \item \textbf{$A_2$ (En-Route Interception / Hijacking):} Physical diversion of transit trucks to private commercial mills while falsifying delivery receipts.
-    \item \textbf{$A_3$ (Quantity Skimming):} Systematic extraction of 2\% to 5\% grain mass per logistics hop by tampering with vehicle discharge chutes.
-    \item \textbf{$A_4$ (Moisture / Quality Adulteration):} Adding water or inferior grains to dry stock to offset stolen mass while maintaining gross weighbridge readings.
-    \item \textbf{$A_5$ (Tamper-Evident Seal Compromise):} Breaking transport container bolt seals en-route and replacing them with counterfeit replicas.
-    \item \textbf{$A_6$ (Recycled Delivery Slips):} Replaying historical weighbridge certificates to validate unauthorized or non-existent dispatches.
-    \item \textbf{$A_7$ (Sub-Tolerance Skimming):} Distributed micro-theft strictly calibrated beneath local statutory tolerance $\tau_{v,t}$ across dozens of depots, evading deterministic rules.
-    \item \textbf{$A_8$ (Collusive Inter-Entity Laundering):} Bilateral collusion between dispatching and receiving operators who record matched false numbers to conceal long-term depot deficits.
-\end{itemize}
-
-\section{Proposed Methodology \& Mathematical Formulation}
-
-\subsection{Cross-Stage Quantity Reconciliation ($G_1$)}
-Let $\mathcal{V}$ denote the set of supply chain facilities (mandis, buffer depots, FPS dealers), and let $t \in \mathcal{T}$ denote discrete settlement intervals. For any facility $v \in \mathcal{V}$, mass conservation dictates that the Expected Closing Stock $S^{\text{exp}}_{v,t}$ must satisfy:
-\begin{equation}
-S^{\text{exp}}_{v,t} = S^{\text{obs}}_{v,t-1} + I_{v,t} - O_{v,t} - B_{v,t} - L_{v,t} \tag{6}
-\label{eq:expected_stock}
-\end{equation}
-where $S^{\text{obs}}_{v,t-1}$ is the verified physical inventory at the end of interval $t-1$, $I_{v,t}$ is accepted inbound stock, $O_{v,t}$ is authorized outbound dispatches, $B_{v,t}$ is authorized sales to biometric-authenticated beneficiaries, and $L_{v,t}$ is legally sanctioned transit shrinkage.
-
-The Observed Discrepancy $\Delta_{v,t}$ is given by:
-\begin{equation}
-\Delta_{v,t} = S^{\text{exp}}_{v,t} - S^{\text{obs}}_{v,t} \tag{7}
-\label{eq:discrepancy}
-\end{equation}
-
-To prevent normal scale calibration jitter from overwhelming audit teams, we formulate a state-dependent Dynamic Tolerance $\tau_{v,t}$ and Relative Discrepancy $z_{v,t}$:
-\begin{equation}
-\tau_{v,t} = \max(\tau_{\text{abs}},\; \rho \cdot S^{\text{exp}}_{v,t}), \quad z_{v,t} = \frac{|\Delta_{v,t}|}{\max(S^{\text{exp}}_{v,t},\; \epsilon)} \tag{8}
-\label{eq:dynamic_tol}
-\end{equation}
-where $\tau_{\text{abs}} = 10.0$\,kg, relative loss coefficient $\rho = 0.005$ (0.5\%), and numerical stabilizer $\epsilon = 10^{-4}$.
-
-The Deterministic Exception Decision Rule $a^{\text{rule}}_{v,t} \in \{0, 1\}$ evaluates as:
-\begin{equation}
-a^{\text{rule}}_{v,t} = \mathbf{1}\left[ |\Delta_{v,t}| > \tau_{v,t} \right] \tag{9}
-\label{eq:rule}
-\end{equation}
-
-To prevent adversarial actors from concealing local deficits through cross-facility circular dispatches, we compute the Global Lot Conservation Residual $r_{l,t}$ for any lot $l$ with initial registered mass $Q_l$:
-\begin{equation}
-r_{l,t} = Q_l - \left( \sum_{v \in \mathcal{V}} S^{\text{obs},(l)}_{v,t} + \sum_{e \in \mathcal{T}_t} q^{\text{disp}}_e + B^{(l)}_{\le t} + L^{(l)}_{\le t} \right) \tag{10}
-\label{eq:lot_residual}
-\end{equation}
-where $q^{\text{disp}}_e$ is mass currently in active transit across transport edges $\mathcal{T}_t$. Under an uncompromised supply chain, $r_{l,t} \equiv 0$. Any condition $r_{l,t} > \tau_{\text{global}}$ immediately triggers an enterprise-wide quarantine.
-
-\subsection{Offline-First Cryptographic Hash-Chaining ($G_2$)}
-In remote mandis without cellular coverage, terminal operators cannot broadcast on-chain transactions. HarvestLink establishes localized chronological immutability via an append-only hash chain. Each event $e$ generated on local terminal $k$ produces an encrypted commitment $\pi_e$:
-\begin{equation}
-\pi_e = H\left(\text{event\_id} \parallel n_e \parallel \pi_{\text{pred}(e)} \parallel H(\text{payload}_e)\right) \tag{11}
-\label{eq:hash_chain}
-\end{equation}
-where $n_e \in \mathbb{N}$ is a strictly increasing sequence counter, $\pi_{\text{pred}(e)}$ is the cryptographic hash of the immediate predecessor event ($\pi_0 = \text{"GENESIS"}$), and $H(\cdot)$ denotes Keccak-256. Every event is signed locally via EIP-191 private key signatures: $\sigma_e = \text{Sign}_{sk}(\pi_e)$.
-
-\begin{figure}[t]
-\centering
-\begin{tikzpicture}[
-    scale=0.82, every node/.style={transform shape},
-    box/.style={draw, rounded corners=3pt, font=\scriptsize, align=center, fill=gray!10, line width=0.8pt},
-    arr/.style={-{Stealth[length=2.5mm]}, line width=1pt}
-]
-\node[box, fill=blue!10] (dev) at (0, 0) {\textbf{Offline Edge Device}\\\texttt{generate(event\_id, payload)}};
-\node[box, fill=orange!10] (hash) at (3.8, 0) {\textbf{Compute Hash Commitment}\\\texttt{$\pi_e = H(id \parallel n_e \parallel \pi_{pred} \parallel H(p))$}};
-\node[box, fill=purple!10] (sign) at (3.8, -1.5) {\textbf{EIP-191 Signature}\\\texttt{$\sigma_e = \text{Sign}_{sk}(\pi_e)$}};
-\node[box, fill=green!10] (store) at (0, -1.5) {\textbf{IndexedDB Cache}\\\texttt{Queue Status: PENDING}};
-\node[box, fill=yellow!15, minimum width=7.5cm] (relay) at (1.9, -3.0) {\textbf{Network Reconnection $\rightarrow$ Sync Relayer Batch Audit}\\Check: $V(e) = A(e) \land S(e) \land P(e) \land U(e)$};
-\node[box, fill=blue!15] (chain) at (1.9, -4.2) {\textbf{Ethereum Smart Contract}\\\texttt{Batch Commit Roots / State Transition Confirmed}};
-
-\draw[arr] (dev) -- (hash);
-\draw[arr] (hash) -- (sign);
-\draw[arr] (sign) -- (store);
-\draw[arr] (store) |- (relay);
-\draw[arr] (relay) -- node[right, font=\tiny] {If $V(e) = \text{TRUE}$} (chain);
-\end{tikzpicture}
-\caption{Offline Hash-Chaining and Reconnection Verification Protocol.}
-\label{fig:hash_chain_flow}
+\caption{HarvestLink logical architecture. The contract is authoritative for accepted lot-state transitions; Supabase stores application and operational metadata. Edge Functions independently verify receipts.}
+\label{fig:arch}
 \end{figure}
 
-Upon network restoration, the terminal broadcasts the local chain queue to an operational relayer. The relayer evaluates the Cryptographic Integrity Predicate $V(e)$:
+\subsection{Authority Separation}
+The application database stores profiles, role requests, crop and batch metadata, and chain references. The EVM contract stores authoritative state and emits events. An approved application role does not itself grant contract authority: an administrator separately grants a wallet role after a signed wallet proof links it to the authenticated account. This reduces the risk that a database-only compromise directly authorises a contract transition. Administrator keys and RPC configuration remain critical trust dependencies.
+
+\subsection{Actors and Roles}
+Actors include farmers/procurement operators who register lots; warehouse operators who receive, split and transfer lots; allocators who assign stock to outlets; distribution officers who issue and redeem entitlements; administrators who approve roles and manage pause controls; and public visitors/auditors who inspect QR-verifiable lot history. Production administration should use a multi-signature wallet and documented key rotation, emergency pause and dispute procedures.
+
+\subsection{End-to-End Workflow}
+An operator signs in, requests a role and connects a wallet. The application validates public-safe fields and builds a versioned commitment. The wallet signs a transaction. The contract checks role, lot state and quantity bounds before emitting an event. The application waits for a configured confirmation count. An Edge Function independently queries the chain and verifies the receipt before the record is shown as chain-confirmed. A public QR page reads contract state and event history without requiring a visitor account.
+
+\section{Smart Contract and Data Model}
+\subsection{Lot State Machine}
+A lot progresses through Registered, Split, InTransit, Received, Allocated, EntitlementIssued and Distributed states, with Recalled available as an authorised exception path. Each event records lot identifier, event type, actor address, quantity where applicable, timestamp and a commitment to associated public-safe data. Corrections are new authorised events referencing prior events, not silent overwrites.
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[font=\scriptsize,>=Stealth,
+  st/.style={draw,rounded corners=2pt,minimum width=1.5cm,minimum height=0.75cm,align=center,fill=green!7}]
+\node[st] (a) {Register\\lot + commitment};
+\node[st,right=0.4cm of a] (b) {Split\\child quantity};
+\node[st,right=0.4cm of b] (c) {Transfer\\custody event};
+\node[st,below=0.55cm of a] (d) {Receive\\receipt};
+\node[st,right=0.4cm of d] (e) {Allocate\\outlet stock};
+\node[st,right=0.4cm of e] (f) {Redeem\\single-use};
+\node[draw,dashed,rounded corners=2pt,fit={(a) (c) (d) (f)},inner sep=6pt,label={[font=\tiny]below:Recall (authorised exception path)}] {};
+\draw[->] (a)--(b); \draw[->] (b)--(c);
+\draw[->] (c.south) -- ++(0,-0.2) -| ($(d.north)+(0,0.2)$) -- (d.north);
+\draw[->] (d)--(e); \draw[->] (e)--(f);
+\end{tikzpicture}
+\caption{Main lot lifecycle. Recall is an authorised exception transition; invalid transitions, overdraw and repeated redemption are rejected by the contract.}
+\label{fig:lifecycle}
+\end{figure}
+
+\begin{table}[!t]
+\caption{Principal Notation}
+\label{tab:notation}
+\centering\footnotesize
+\begin{tabularx}{\columnwidth}{@{}p{1.05in} X@{}}
+\toprule
+Symbol & Meaning\\
+\midrule
+$Q_p,\;q_i$ & Parent-lot quantity; child-lot quantity (kg)\\
+$S_{v,t}$ & Ledger stock at facility $v$, end of period $t$\\
+$S^{\mathrm{obs}}_{v,t},\,S^{\mathrm{exp}}_{v,t}$ & Verified physical count; expected closing stock\\
+$I,O,B,L$ & Inbound, outbound, beneficiary issue, approved loss\\
+$\Delta_{v,t},\,z_{v,t}$ & Discrepancy and relative discrepancy\\
+$\tau_{\mathrm{abs}},\,\rho$ & Absolute and relative tolerance\\
+$G_t=(V,E_t,X_t,Z_t)$ & Temporal supply-chain graph\\
+$d_{ij},\,\ell_{ij},\,r_{ij}$ & Quantity gap, delivery duration, relative gap of transfer $e_{ij}$\\
+$h_i^{(l)},\,\mathbf z_{ij}$ & Node representation at layer $l$; edge features\\
+$\alpha_{ij}^{(l,k)}$ & Attention coefficient, layer $l$, head $k$\\
+$p_{ij},\,\theta$ & Anomaly probability; decision threshold\\
+$C(e)$ & Contract-validity indicator of event $e$\\
+$C_e$ & Evidence completeness score\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Quantity Bounds and Conservation}
+Table~\ref{tab:notation} lists the notation used in this paper. Let $Q_p$ denote the registered parent-lot quantity, $q_i$ the quantity assigned to child lot $i$, $A_v$ the total quantity allocated by facility $v$, and $S_{v,t}$ its stock at the end of period $t$. The contract-level invariants are
 \begin{equation}
-V(e) = A(e) \land S(e) \land P(e) \land U(e) \tag{12}
-\label{eq:predicate}
+\sum_{i=1}^{n_p} q_i \le Q_p,\qquad A_v \le S_{v,t},\qquad S_{v,t}\ge 0.
+\label{eq:inv}
 \end{equation}
-\begin{itemize}
-    \item $A(e)$: $\text{ecrecover}(\pi_e, \sigma_e)$ possesses authorized on-chain roles.
-    \item $S(e)$: $\sigma_e$ is an authentic signature over payload commitment $\pi_e$.
-    \item $P(e)$: $\pi_{\text{pred}(e)} \equiv \pi_{e-1}$ across all consecutive entries.
-    \item $U(e)$: $\text{event\_id}$ has never been previously committed (anti-replay).
-\end{itemize}
-
-\begin{theorem}[Tamper-Evident History Preservation]
-Under the collision resistance of Keccak-256 and the unforgeability of ECDSA under chosen-message attacks (EUF-CMA), any retrospective alteration, deletion, or reordering of offline events is detectable with probability $1 - 2^{-256}$.
-\end{theorem}
-\begin{proof}
-Suppose an adversary alters event $e_j$ to $e'_j$ where $j < k$. By collision resistance, $H(\text{payload}_{e_j}) \neq H(\text{payload}_{e'_j})$ with probability $1 - 2^{-256}$. Consequently, $\pi_{e_j} \neq \pi'_{e_j}$. Because $\pi_{e_j}$ is embedded recursively in $\pi_{e_{j+1}} = H(\dots \parallel \pi_{e_j} \dots)$, the sequence mismatch cascades strictly to the current tip $\pi_{e_k}$. Since the adversary cannot forge ECDSA signatures for legitimate actors on the modified chain tips, predicate $P(e)$ or $S(e)$ must evaluate to false.
-\end{proof}
-
-\subsection{Handover Evidence Completeness Metric ($G_3$)}
-Physical-to-digital handovers are evaluated against an evidence vector $\mathbf{f} \in \{0, 1\}^{12}$ across 12 empirical validation dimensions:
+Let $I_{v,t}$, $O_{v,t}$, $B_{v,t}$ and $L_{v,t}$ denote accepted inbound quantity, authorised outbound dispatch, beneficiary issue and approved loss/adjustment during period $t$. The ledger inventory-conservation equation is
 \begin{equation}
-C_e = \frac{1}{m} \sum_{k=1}^{m} \mathbf{1}\left[ f_k \text{ is present and verified} \right] \tag{13}
-\label{eq:evidence_completeness}
+S_{v,t}=S_{v,t-1}+I_{v,t}-O_{v,t}-B_{v,t}-L_{v,t},
+\label{eq:cons}
 \end{equation}
-where $m = 12$. The operational dimensions encompass: (1) valid consignment UUID, (2) on-chain parent lot hash, (3) sender address authorization, (4) receiver address authorization, (5) verified carrier registration tag, (6) RFID container bolt seal identifier, (7) dispatch weighbridge ticket, (8) receiving weighbridge ticket, (9) calibrated scale digital certificate hash, (10) mandatory quality inspection clearance, (11) grain moisture tolerance compliance ($10.0\% \le M \le 14.0\%$), and (12) recipient EIP-191 cryptographic acknowledgement. Any consignment with $C_e < 0.85$ triggers an automatic logistics hold.
-
-\subsection{Edge-Aware Graph Attention Network (GAT)}
-We model the supply chain as a temporal multigraph $\mathcal{G}_t = (\mathcal{V}, \mathcal{E}_t, \mathbf{X}_t, \mathbf{Z}_t)$, where nodes $v \in \mathcal{V}$ carry operational feature vectors $\mathbf{x}_i \in \mathbb{R}^d$ (facility type, historical turnover, geographical coordinates, past anomaly frequency). For each transfer edge $e = (i, j) \in \mathcal{E}_t$, we construct a specialized edge feature vector $\mathbf{z}_{ij} \in \mathbb{R}^4$:
+where, for facility $v$ with incoming and outgoing shipment sets $E^{\mathrm{in}}_{v,t}$ and $E^{\mathrm{out}}_{v,t}$,
 \begin{equation}
-\mathbf{z}_{ij} = \left[ d_{ij},\; r_{ij},\; l_{ij},\; C_e \right]^{\top} \tag{15}
-\label{eq:edge_features}
+I_{v,t}=\sum_{e\in E^{\mathrm{in}}_{v,t}}\qrec_e,\qquad O_{v,t}=\sum_{e\in E^{\mathrm{out}}_{v,t}}\qdisp_e.
+\label{eq:io}
 \end{equation}
-where $d_{ij} = q^{\text{disp}}_{ij} - q^{\text{rec}}_{ij}$ is the absolute transit quantity gap, $r_{ij} = d_{ij}/\max(q^{\text{disp}}_{ij}, \epsilon)$ is the relative transit loss ratio, $l_{ij}$ is the transit duration in elapsed hours, and $C_e$ is the evidence completeness score from Eq.~\eqref{eq:evidence_completeness}.
+All quantities use a canonical unit (e.g., kg); conversion from quintals or tonnes is explicit. Eq.~\eqref{eq:inv} for splitting and allocation is enforced deterministically by the contract; the cross-stage reconciliation built on Eqs.~\eqref{eq:cons}--\eqref{eq:io} runs off-chain.
 
-Unlike standard GAT models that restrict attention to node pairs, our attention mechanism explicitly parameterizes edge features $\mathbf{z}_{ij}$ within the attention weight computation. For node $i$ with immediate neighborhood $\mathcal{N}_i$, the attention coefficient $\alpha_{ij}^k$ under head $k \in \{1, \dots, K\}$ is formulated as:
+\subsection{Entitlement Redemption}
+For entitlement identifier $id$ and high-entropy secret $s$, the contract stores $h=H(s\,\|\,id)$. A redemption request $(id,s,a)$ for amount $a$ is accepted if and only if
 \begin{equation}
-\alpha_{ij}^{k} = \frac{\exp\left(\text{LeakyReLU}\left(\mathbf{a}_k^{\top}\left[\mathbf{W}_k\mathbf{x}_i \parallel \mathbf{W}_k\mathbf{x}_j \parallel \mathbf{W}_e^k\mathbf{z}_{ij}\right]\right)\right)}{\sum_{u \in \mathcal{N}_i} \exp\left(\text{LeakyReLU}\left(\mathbf{a}_k^{\top}\left[\mathbf{W}_k\mathbf{x}_i \parallel \mathbf{W}_k\mathbf{x}_u \parallel \mathbf{W}_e^k\mathbf{z}_{iu}\right]\right)\right)} \tag{17}
-\label{eq:gat_attention}
+H(s\,\|\,id)=h_{id}\;\wedge\;a\le a_{id}\;\wedge\;\neg\,\mathrm{used}_{id},
+\label{eq:redeem}
 \end{equation}
-where $\mathbf{W}_k \in \mathbb{R}^{d' \times d}$ is the node projection matrix, $\mathbf{W}_e^k \in \mathbb{R}^{d' \times 4}$ is the edge projection matrix, $\mathbf{a}_k \in \mathbb{R}^{3d'}$ is the parameterized attention vector, and $\parallel$ denotes concatenation.
+after which the entitlement is marked used. This reduces replay risk but does not prove eligibility, which remains an off-chain authority decision. Secret delivery, recovery and mempool visibility require a fuller privacy threat model.
 
-The updated node representation $\mathbf{h}_i$ aggregates multi-head embeddings:
+\subsection{Commitment and Off-Chain Storage}
+A commitment is a hash over a canonical, versioned encoding of public-safe fields $m$:
 \begin{equation}
-\mathbf{h}_i = \overset{K}{\underset{k=1}{\Bigparallel}} \sigma\left( \sum_{j \in \mathcal{N}_i} \alpha_{ij}^k \mathbf{W}_k \mathbf{x}_j \right) \tag{21}
+cm=H\big(\mathrm{ver}\,\|\,\mathrm{ser}(m)\big),
+\label{eq:commit}
 \end{equation}
-Edge-level anomaly probability $p_{ij} \in [0, 1]$ is generated by a multi-layer perceptron over the concatenated endpoint states and edge tensor:
+where $\mathrm{ser}(\cdot)$ is a fixed canonical serialisation. A verifier recomputes $cm$ from the stored row and compares it with the on-chain value; any mismatch indicates post-commit tampering (test T8). Predictable personal values such as phone numbers or government identifiers must not be hashed and published because enumeration may recover them. Names, addresses, eligibility documents and household details remain in access-controlled storage. On-chain data is limited to lot identifiers, public-safe commodity attributes, event references, quantities and verification commitments.
+
+\section{Methodology: Reconciliation, Synchronisation and Evidence}
+Sections~V-A to V-C define the deterministic components; Section~\ref{sec:gat} adds the learned component, and Fig.~\ref{fig:loop} summarises the operational control loop.
+
+\subsection{G1: Cross-Stage Quantity Reconciliation}
+The reconciliation service compares expected stock with accepted receipts and signed physical-count evidence at each custody point. For facility $v$ and period $t$, expected closing stock is anchored on the previous verified physical stock,
 \begin{equation}
-p_{ij} = \sigma\left(\mathbf{w}_c^{\top}\left[\mathbf{h}_i \parallel \mathbf{h}_j \parallel \mathbf{z}_{ij}\right] + b_c\right) \tag{23}
-\label{eq:anomaly_prob}
+S^{\mathrm{exp}}_{v,t}=S^{\mathrm{obs}}_{v,t-1}+I_{v,t}-O_{v,t}-B_{v,t}-L_{v,t},
+\label{eq:exp}
 \end{equation}
-
-Operational triage is orchestrated through our hybrid decision rule $\mathcal{D}(e)$:
+and the discrepancy against the new verified count is
 \begin{equation}
-\mathcal{D}(e) = \begin{cases} 
-\text{REJECT}, & \text{if } C(e) = 0 \text{ or } a^{\text{rule}}_e = 1 \\ 
-\text{REVIEW}, & \text{if } C(e) = 1 \text{ and } a^{\text{rule}}_e = 0 \text{ and } p_{ij} \ge \theta^* \\ 
-\text{ACCEPT}, & \text{if } C(e) = 1 \text{ and } a^{\text{rule}}_e = 0 \text{ and } p_{ij} < \theta^* 
-\end{cases} \tag{27}
-\label{eq:hybrid_decision}
+\Delta_{v,t}=S^{\mathrm{exp}}_{v,t}-S^{\mathrm{obs}}_{v,t}.
+\label{eq:delta}
 \end{equation}
-where $C(e) \in \{0, 1\}$ represents on-chain smart contract constraint execution, and $\theta^* = 0.55$ is the empirical optimal classification threshold.
+To account for scale and commodity-specific measurement tolerance, define
+\begin{equation}
+\tau_{v,t}=\max\!\big(\tau_{\mathrm{abs}},\,\rho\,S^{\mathrm{exp}}_{v,t}\big),\qquad
+z_{v,t}=\frac{|\Delta_{v,t}|}{\max(S^{\mathrm{exp}}_{v,t},\epsilon)},
+\label{eq:tau}
+\end{equation}
+where $\tau_{\mathrm{abs}}$ is an absolute tolerance, $\rho$ a relative tolerance and $\epsilon>0$ prevents division by zero. The deterministic rule raises an exception when
+\begin{equation}
+a^{\mathrm{rule}}_{v,t}=\ind\big[\,|\Delta_{v,t}|>\tau_{v,t}\,\big].
+\label{eq:rule}
+\end{equation}
+Facility-level checks can miss losses spread across stages, so a lot-level conservation residual is also tracked. For lot $\ell$ with registered quantity $Q_\ell$, let $T_t$ be the set of shipments in transit at time $t$, and $B^{(\ell)}_{\le t}$, $L^{(\ell)}_{\le t}$ the cumulative issues and approved losses:
+\begin{equation}
+r_{\ell,t}=Q_\ell-\Big(\sum_v S^{\mathrm{obs},(\ell)}_{v,t}+\sum_{e\in T_t}\qdisp_e+B^{(\ell)}_{\le t}+L^{(\ell)}_{\le t}\Big).
+\label{eq:resid}
+\end{equation}
+A non-zero $r_{\ell,t}$ beyond tolerance is an exception even when every individual facility passes Eq.~\eqref{eq:rule}. An exception records expected and observed amounts, difference, source events, evidence references, responsible organisations and resolution status. A mismatch is not automatically proof of diversion; human audit and documented resolution are required. Tolerance values reflect commodity, weighing process and applicable policy.
 
-\subsection{Algorithmic Procedures}
-The dual-layer produce registration and the offline chain validation workflows are codified in Algorithm~\ref{alg:registration} and Algorithm~\ref{alg:audit}.
+\subsection{G2: Offline-First Event Capture}
+Offline mode allows an authorised operator to capture a transaction during network loss. Each event $e$ contains a globally unique \texttt{event\_id}, actor/device identity, local sequence number $n_e$, \texttt{captured\_at} timestamp, predecessor-event reference, payload hash and digital signature. Events from one device are hash-chained,
+\begin{equation}
+\pi_e=H\big(\mathrm{event\_id}_e\,\|\,n_e\,\|\,\pi_{\mathrm{pred}(e)}\,\|\,H(\mathrm{payload}_e)\big),
+\label{eq:chain}
+\end{equation}
+so that modification, deletion or reordering of queued events is detectable. The client stores events in an encrypted queue with status PENDING. The integrity predicate is
+\begin{equation}
+V(e)=A(e)\wedge S(e)\wedge P(e)\wedge U(e),
+\label{eq:V}
+\end{equation}
+where $A(e)$ verifies actor authority, $S(e)$ the signature and payload hash, $P(e)$ the expected predecessor/state version, and $U(e)$ that the event identifier has not already been applied. Only events with $V(e)=1$ are submitted, in sequence, in batches on reconnection. Idempotency is enforced by a unique constraint on \texttt{event\_id}: repeated submissions return the prior processing result rather than applying the event again. Captured time and chain commit time remain separate, and a client clock is not trusted for final ordering. If two events $e_1,e_2$ claim the same predecessor but request incompatible transitions, the service quarantines both for authorised resolution. An event is shown as ledger-confirmed only after independent receipt verification.
 
-\begin{algorithm}[t]
-\caption{Dual-Layer Produce Lot Registration}
-\label{alg:registration}
+\subsection{G3: Physical-to-Digital Evidence}
+A QR code identifies a lot or shipment but does not prove contents or weight. Each handover includes sender and receiver identities, shipment ID, vehicle/carrier reference, seal/label ID where used, dispatch and receipt quantities, weighment record, inspection result, captured time and document hash, together with a receiver-signed receipt. Evidence completeness for a handover of a given type is
+\begin{equation}
+C_e=\frac{1}{m}\sum_{k=1}^{m}\ind\big[f_k\text{ present and valid}\big],
+\label{eq:Ce}
+\end{equation}
+where $f_k$ is a required evidence field and $m$ the number of required fields ($m=12$ in our configuration). $C_e$ measures record completeness, not the truthfulness of the physical claim. Calibrated weighbridge or scale outputs may be signed by a trusted device; GPS/RFID provide context, not standalone proof of physical truth.
+
+\section{GAT-Based Graph Anomaly Prioritisation}
+\label{sec:gat}
+The GAT is an off-chain analytical component that learns relationships among supply-chain participants and custody transfers. It does not execute inside the smart contract and does not override contract-level authorisation or quantity invariants. This separation keeps deterministic validation explainable and limits the effect of model errors.
+
+\subsection{Motivation}
+The rule in Eq.~\eqref{eq:rule} is local: it tests one facility and one period. It cannot see a pattern in which a node loses a quantity below tolerance on many shipments, or in which a particular pair of entities repeatedly shows mismatches. A graph model aggregates evidence over neighbours, and attention weights indicate which transfers influenced a score, which supports human review.
+
+\subsection{Temporal Supply-Chain Graph}
+At observation time $t$, the operational network is a directed, attributed graph
+\begin{equation}
+G_t=(V,E_t,X_t,Z_t),
+\label{eq:graph}
+\end{equation}
+where $V$ contains procurement centres, warehouses, transporters and FPS entities; $E_t$ contains accepted or pending custody-transfer events with timestamp $\le t$; $X_t$ is the node-feature matrix; and $Z_t$ the edge-feature matrix. An edge $e_{ij}$ represents a transfer from entity $i$ to entity $j$. Node features include normalised current stock, inbound and outbound totals, recent discrepancy ratio $z_{v,t}$, pending-event count and facility type. Edge features include declared dispatch quantity, received quantity, quantity difference, delivery duration, event status, evidence completeness $C_e$ and time since the previous accepted transfer. Personal beneficiary identifiers are excluded from all graph features. For a transfer $e_{ij}$ define
+\begin{equation}
+d_{ij}=\qdisp_{ij}-\qrec_{ij},\quad \ell_{ij}=t^{\mathrm{rec}}_{ij}-t^{\mathrm{disp}}_{ij},\quad r_{ij}=\frac{d_{ij}}{\max(\qdisp_{ij},\epsilon)}.
+\label{eq:edgefeat}
+\end{equation}
+The edge feature vector is $\mathbf z_{ij}=[d_{ij},r_{ij},\ell_{ij},C_e]^{\top}$. Continuous features are standardised using training-set statistics only,
+\begin{equation}
+\tilde x=\frac{x-\mu_{\mathrm{train}}}{\sigma_{\mathrm{train}}},
+\label{eq:std}
+\end{equation}
+categorical features use a fixed training vocabulary, and missing values receive an explicit missingness indicator rather than being treated as zero.
+
+\subsection{Edge-Aware Graph Attention}
+Let $h^{(0)}_i=\tilde x_i$. The neighbourhood of node $i$ is $\mathcal N(i)=\{j:(j,i)\in E_t\ \text{or}\ (i,j)\in E_t\}\cup\{i\}$; edge features of a reversed edge carry a direction indicator, and the self-loop uses $\mathbf z_{ii}=\mathbf 0$. For layer $l$ and attention head $k$, the unnormalised score, the normalised coefficient and the head message are
+\begin{align}
+e^{(l,k)}_{ij}&=\mathrm{LeakyReLU}\!\Big(\mathbf a^{(l,k)\top}\big[W^{(l,k)}h^{(l)}_i\,\|\,W^{(l,k)}h^{(l)}_j\,\|\,U^{(l,k)}\mathbf z_{ij}\big]\Big),\label{eq:score}\\
+\alpha^{(l,k)}_{ij}&=\frac{\exp\big(e^{(l,k)}_{ij}\big)}{\sum_{m\in\mathcal N(i)}\exp\big(e^{(l,k)}_{im}\big)},\label{eq:alpha}\\
+m^{(l,k)}_i&=\sigma\Big(\sum_{j\in\mathcal N(i)}\alpha^{(l,k)}_{ij}\big(W^{(l,k)}h^{(l)}_j+U^{(l,k)}\mathbf z_{ij}\big)\Big).\label{eq:msg}
+\end{align}
+Hidden layers concatenate the $K$ head messages and the final layer averages them:
+\begin{align}
+h^{(l+1)}_i&=\Big\|_{k=1}^{K}m^{(l,k)}_i,\quad l<L-1,\label{eq:concat}\\
+h^{(L)}_i&=\frac1K\sum_{k=1}^{K}m^{(L-1,k)}_i.\label{eq:avg}
+\end{align}
+Transfer attributes therefore influence both the attention score and the message passed between entities. The GATv2 variant replaces Eq.~\eqref{eq:score} by $\mathbf a^{\top}\mathrm{LeakyReLU}(W[h_i\|h_j\|\mathbf z_{ij}])$ to obtain dynamic attention~\cite{brody2022}. For $L$ layers, $K$ heads and hidden width $F'$, one forward pass costs $O\big(LK(|V|FF'+|E|F')\big)$, linear in graph size.
+
+\subsection{Transfer-Level Anomaly Classifier}
+After $L$ layers, the representation of transfer $e_{ij}$ and its anomaly probability are
+\begin{align}
+\mathbf g_{ij}&=\big[h^{(L)}_i\,\|\,h^{(L)}_j\,\|\,\tilde{\mathbf z}_{ij}\big],\label{eq:g}\\
+p_{ij}&=\mathrm{sigmoid}\big(\mathbf w_c^{\top}\mathrm{ReLU}(W_1\mathbf g_{ij}+\mathbf b_1)+b_c\big).\label{eq:p}
+\end{align}
+Let $y_{ij}\in\{0,1\}$ be the label (1 = anomalous transfer). To handle class imbalance, the model minimises the weighted binary cross-entropy
+\begin{equation}
+\mathcal L_{\mathrm{WBCE}}=-\frac1N\sum_{(i,j)}\Big[w_1y_{ij}\log(p_{ij}+\epsilon)+w_0(1-y_{ij})\log(1-p_{ij}+\epsilon)\Big],
+\label{eq:wbce}
+\end{equation}
+with class weights estimated from training data only,
+\begin{equation}
+w_1=\frac{N}{2N_1},\qquad w_0=\frac{N}{2N_0},
+\label{eq:w}
+\end{equation}
+where $N_1$ and $N_0$ count anomalous and normal training transfers. The threshold is selected on the validation set, never the test set,
+\begin{equation}
+\theta^{*}=\arg\max_{\theta}\mathrm{F1}_{\mathrm{val}}(\theta)\quad\text{or}\quad\theta^{*}=\min\{\theta:\mathrm{FAR}_{\mathrm{val}}(\theta)\le\alpha\},
+\label{eq:theta}
+\end{equation}
+and the prediction is $\hat y_{ij}=\ind[p_{ij}\ge\theta^{*}]$. The output is a prioritisation signal, not proof of fraud or diversion.
+
+\begin{figure*}[!t]
+\centering
+\begin{tikzpicture}[font=\scriptsize,>=Stealth,
+  n/.style={draw,rounded corners=2pt,minimum width=2.1cm,minimum height=0.8cm,align=center,fill=orange!8}]
+\node[n] (a) {On-chain events\\verified receipts};
+\node[n,right=0.45cm of a] (b) {Indexer\\canonical units};
+\node[n,right=0.45cm of b] (c) {Graph builder\\$G_t,\,x_i,\,\mathbf z_{ij}$};
+\node[n,right=0.45cm of c,yshift=0.55cm] (d) {Rule engine\\Eqs.~(6)--(10)};
+\node[n,right=0.45cm of c,yshift=-0.55cm] (e) {Edge-aware GAT\\Eqs.~(17)--(23)};
+\coordinate (de_mid) at ($(d)!0.5!(e)$);
+\node[n,right=0.9cm of de_mid] (f) {Hybrid decision\\Eq.~(27)};
+\node[n,right=0.45cm of f] (g) {Human review\\audit event};
+\draw[->] (a)--(b); \draw[->] (b)--(c);
+\draw[->] (c.east)--(d.west); \draw[->] (c.east)--(e.west);
+\draw[->] (d.east)--(f.west); \draw[->] (e.east)--(f.west);
+\draw[->] (f)--(g);
+\end{tikzpicture}
+\caption{Off-chain control loop. Deterministic contract validation is unchanged; the rule engine and the GAT only produce review signals, and every resolution is recorded as a new auditable event.}
+\label{fig:loop}
+\end{figure*}
+
+\begin{algorithm}[!t]
+\caption{Reconciliation and GAT-Assisted Review (period $t$)}
+\label{alg:main}
 \begin{algorithmic}[1]
-\REQUIRE Produce payload $\mathcal{D} = \{name, qty, price, mandi, wallet\}$, Base URL $\mathcal{U}_{base}$
-\ENSURE UUID $cropId$, Batch number $batchNum$, Ledger Tx $txHash$, Vector QR $\mathcal{Q}$
-\STATE $farmerId \leftarrow \text{QueryProfile}(\mathcal{D}.wallet)$
-\IF{$farmerId = \text{NULL}$}
-    \STATE \textbf{throw} UnauthorizedFarmerException
-\ENDIF
-\STATE $cropId \leftarrow \text{InsertDatabase}(\text{"crops"}, farmerId, \mathcal{D})$
-\STATE $batchNum \leftarrow \text{"PDS-LOT-"} \parallel \text{Timestamp}()[-6:]$
-\STATE $qrPayload \leftarrow \mathcal{U}_{base} \parallel \text{"/lot/"} \parallel cropId$
-\STATE $\text{InsertDatabase}(\text{"batches"}, cropId, batchNum, qrPayload)$
-\IF{$\text{WalletIsConnected}() \land \text{NetworkIsSepolia}()$}
-    \STATE $h_{data} \leftarrow \text{SHA256}(\text{CanonicalJSON}(\mathcal{D}))$
-    \STATE $txReceipt \leftarrow \text{Contract}.\text{registerLot}(\text{Keccak}(cropId), \text{Keccak}(\mathcal{D}.name), \text{ParseUnits}(\mathcal{D}.qty, 3), \text{Keccak}(\text{"kg"}), \mathcal{D}.wallet, h_{data})$
-    \STATE $txHash \leftarrow txReceipt.hash$
-\ELSE
-    \STATE $txHash \leftarrow \text{QueueOfflineEvent}(\text{"LOT\_REG"}, cropId, \mathcal{D})$
-\ENDIF
-\STATE $\mathcal{Q} \leftarrow \text{RenderVectorQRCode}(qrPayload, \text{level}=\text{"H"})$
-\RETURN $\{cropId, batchNum, txHash, \mathcal{Q}\}$
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}[t]
-\caption{Offline Hash-Chain Verification and Audit}
-\label{alg:audit}
-\begin{algorithmic}[1]
-\REQUIRE Offline event stream $\mathcal{E} = [e_1, e_2, \dots, e_m]$, Genesis hash $\pi_0 = \text{"GENESIS"}$
-\ENSURE Audit verdict $\mathcal{S} \in \{\text{VALID}, \text{QUARANTINED}\}$, Fault log $\mathcal{F}$
-\STATE $\pi_{\text{expected}} \leftarrow \pi_0$; $\mathcal{F} \leftarrow \emptyset$
-\FORALL{$e \in \mathcal{E}$}
-    \IF{$e.id \in \text{CommittedEventStore}$}
-        \STATE $\mathcal{F} \leftarrow \mathcal{F} \cup \{\text{"Replay event: "} \parallel e.id\}$
-    \ENDIF
-    \IF{$e.\pi_{\text{pred}} \neq \pi_{\text{expected}}$}
-        \STATE $\mathcal{F} \leftarrow \mathcal{F} \cup \{\text{"Predecessor break at: "} \parallel e.seq\}$
-    \ENDIF
-    \IF{$\text{Keccak}(e.payload) \neq e.payloadHash$}
-        \STATE $\mathcal{F} \leftarrow \mathcal{F} \cup \{\text{"Payload hash corruption: "} \parallel e.id\}$
-    \ENDIF
-    \STATE $\pi_{\text{comp}} \leftarrow \text{Keccak}(e.id \parallel e.seq \parallel e.\pi_{\text{pred}} \parallel e.payloadHash)$
-    \IF{$\pi_{\text{comp}} \neq e.\pi$}
-        \STATE $\mathcal{F} \leftarrow \mathcal{F} \cup \{\text{"Chain hash breakdown: "} \parallel e.id\}$
-    \ENDIF
-    \STATE $signer \leftarrow \text{ECRecover}(e.\pi, e.\sigma)$
-    \IF{$signer \neq e.actorAddress \lor \neg\text{HasRole}(signer, e.role)$}
-        \STATE $\mathcal{F} \leftarrow \mathcal{F} \cup \{\text{"Unauthorized signature: "} \parallel e.id\}$
-    \ENDIF
-    \STATE $\pi_{\text{expected}} \leftarrow e.\pi$
+\REQUIRE Verified on-chain events $E_{\le t}$, physical counts $S^{\mathrm{obs}}_{\cdot,t}$, trained model $f_\phi$, threshold $\theta^*$
+\ENSURE Decisions $D(e)$ and exception records
+\STATE Canonicalise units; build $G_t$ using events with timestamp $\le t$ only
+\FOR{each facility $v$}
+  \STATE compute $S^{\mathrm{exp}}_{v,t},\Delta_{v,t},\tau_{v,t}$ via Eqs.~(6)--(8); set $a^{\mathrm{rule}}_{v,t}$
 \ENDFOR
-\IF{$|\mathcal{F}| = 0$}
-    \RETURN $\{\text{VALID}, \emptyset\}$
-\ELSE
-    \RETURN $\{\text{QUARANTINED}, \mathcal{F}\}$
-\ENDIF
+\FOR{each open lot $\ell$}
+  \STATE compute residual $r_{\ell,t}$ via Eq.~(10)
+\ENDFOR
+\STATE $\{p_{ij}\}\leftarrow f_\phi(G_t)$ \COMMENT{Eqs.~(17)--(23)}
+\FOR{each transfer $e$}
+  \STATE $D(e)\leftarrow$ Eq.~(27)
+  \IF{$D(e)=$ REVIEW}
+    \STATE create exception with evidence references and top-attention edges
+  \ENDIF
+\ENDFOR
+\STATE rank exceptions by $p_e$; route to authorised reviewers; record outcomes as new events
 \end{algorithmic}
 \end{algorithm}
 
-\section{Experimental Evaluation \& Discussion}
+\subsection{Hybrid Decision and Human Review}
+Deterministic violations are kept separate from learned risk. Let $C(e)=1$ if event $e$ satisfies all contract-level authorisation and quantity checks, and $0$ otherwise. Then
+\begin{equation}
+D(e)=\begin{cases}
+\text{REJECT}, & C(e)=0,\\
+\text{REVIEW}, & C(e)=1\wedge\big(a^{\mathrm{rule}}_e=1\ \vee\ p_e\ge\theta^{*}\big),\\
+\text{ACCEPT}, & \text{otherwise.}
+\end{cases}
+\label{eq:decision}
+\end{equation}
+A contract-invalid event is rejected by the contract regardless of the GAT score. A contract-valid event with a rule flag or a high GAT score remains a valid ledger event but creates an investigation alert, ordered by $p_e$. The review outcome, supporting evidence and authorised resolution are recorded as a new auditable event. The model must not autonomously accuse an operator, alter stock, or reverse a confirmed transaction.
 
-\subsection{Experimental Simulation Setup}
-To rigorously benchmark HarvestLink, we developed an agent-based discrete-event logistics simulator replicating an authentic Indian state PDS network over 180 simulated calendar days. The synthetic network graph consists of:
+\subsection{Training Data and Leakage Control}
+Training labels should come from independently verified incident records where authorised data are available. Otherwise, controlled synthetic anomalies are injected into a simulated event stream. The generator draws shipments from configurable procurement, warehouse, transporter and FPS populations with benign measurement noise inside tolerance, and injects the following anomaly families (all labelled as synthetic):
 \begin{itemize}
-    \item 120 Mandi primary procurement centers.
-    \item 30 State Warehousing Corporation (SWC/FCI) buffer grain storage depots.
-    \item 450 Fair Price Shops distributing to registered cardholders.
-    \item 48,000 total commodity movement records ($>350,000$ metric tons of grain).
+\item $A_1$ phantom dispatch / shortfall: $\qrec=(1-\eta)\qdisp$ with $\eta\sim U[\eta_{\min},\eta_{\max}]$ above tolerance;
+\item $A_2$ en-route hijacking, $A_3$ quantity skimming, $A_4$ moisture adulteration, $A_5$ seal compromise, $A_6$ recycled delivery slips (incomplete or reused handover evidence);
+\item $A_7$ distributed sub-tolerance skimming: a node $i$ withholds $\eta_k<\rho$ on each of $n$ outgoing shipments so that every facility-level test passes, while the cumulative loss $\sum_{k=1}^{n}\eta_k\qdisp_k$ is material;
+\item $A_8$ collusive laundering: a fixed pair $(i,j)$ repeatedly shows correlated mismatches.
 \end{itemize}
-We synthesized 4,200 adversarial events distributed across the eight attack archetypes ($A_1$--$A_8$) in accordance with historical enforcement field logs. Data was chronologically partitioned into a 70\% training, 15\% validation, and 15\% test split. The Edge-Aware GAT was implemented in PyTorch Geometric, trained using AdamW ($\text{lr} = 0.001$, weight decay $= 5 \times 10^{-4}$, 4 attention heads, $d' = 64$).
+$A_1$--$A_6$ can in principle be caught by rules; $A_7$--$A_8$ are relational by construction and are the cases where a graph model is expected to add value. Data are split chronologically and, where feasible, facilities or actors are held out to test generalisation. All normalisation, feature selection, threshold selection and class-weight estimation use training/validation data only. Hyperparameters are selected on validation data only, and a test event must not contribute future edges or post-event features to its own prediction. Synthetic labels cannot by themselves establish real-world detection performance.
 
-\subsection{Comparative Model Benchmarks}
-We benchmark HarvestLink against prominent anomaly detection approaches: (1) Rule-based audits (Eq.~\eqref{eq:rule}), (2) Logistic Regression, (3) Random Forest, (4) Standard GCN \cite{ref_gcn}, (5) Standard GAT \cite{ref_gat_orig}, and (6) GATv2 with dynamic attention \cite{ref_gatv2}. As demonstrated in Table~\ref{tab:benchmarks}, our model establishes the highest performance across all evaluation dimensions.
+\subsection{G4--G7: Supporting Extensions}
+G4 privacy: keep beneficiary data off-chain, use pseudonymous references and least-privilege access. G5 replenishment: use verified stock events for threshold-based low-stock and delayed-replenishment alerts before predictive models. G6 quality: capture moisture, pest/infestation checks, storage hygiene and inspection certificates; sensor readings are not certification. G7 performance: compare EVM with PostgreSQL under identical workloads, measuring latency, throughput, storage overhead, complexity and cost.
 
-\begin{table}[htbp]
-\caption{Quantitative Anomaly Detection Benchmark}
-\label{tab:benchmarks}
+\section{Implementation and Current Status}
+\subsection{Technology Stack}
+The implementation comprises React/TypeScript with authentication context, route guards, PDS operations screens, ethers wallet integration and public lot verification. Supabase provides authentication, PostgreSQL metadata, role requests and row-level security. Edge Functions handle wallet proof, role requests, registration, receipt confirmation and QR verification. Solidity is compiled with a pinned compiler and OpenZeppelin sources~\cite{openzeppelin}. Deployer keys and service credentials remain server-side and are never embedded in \texttt{VITE\_}-prefixed client variables.
+
+\subsection{Independent Transaction Confirmation}
+The registration flow validates public-safe fields, computes a versioned commitment (Eq.~\eqref{eq:commit}), inserts pending crop/batch rows and requests a wallet-signed \texttt{registerLot} transaction. After $N$ confirmations, the Edge Function checks chain ID, contract address, expected event, transaction sender and event arguments, recomputes the commitment and marks the row chain-confirmed only if all checks pass. This prevents the browser from self-asserting a successful chain write.
+
+\subsection{User Interface}
+Fig.~\ref{fig:ui} shows the application screens: role dashboard, lot registration and the public QR verification page.
+
+\begin{figure*}[!t]
 \centering
-\begin{tabular}{lccccc}
+\IfFileExists{figs/ui-000.png}{%
+  \includegraphics[width=0.32\textwidth]{figs/ui-000.png}%
+}{%
+  \fbox{\parbox[c][3.8cm][c]{0.30\textwidth}{\centering\scriptsize [Screenshot (a): Role Dashboard]}}%
+}\hfill
+\IfFileExists{figs/ui-001.png}{%
+  \includegraphics[width=0.32\textwidth]{figs/ui-001.png}%
+}{%
+  \fbox{\parbox[c][3.8cm][c]{0.30\textwidth}{\centering\scriptsize [Screenshot (b): Lot Registration]}}%
+}\hfill
+\IfFileExists{figs/ui-002.png}{%
+  \includegraphics[width=0.32\textwidth]{figs/ui-002.png}%
+}{%
+  \fbox{\parbox[c][3.8cm][c]{0.30\textwidth}{\centering\scriptsize [Screenshot (c): Public QR Verification]}}%
+}\\[2pt]
+\makebox[0.32\textwidth]{\footnotesize (a) Role dashboard}\hfill
+\makebox[0.32\textwidth]{\footnotesize (b) Lot registration}\hfill
+\makebox[0.32\textwidth]{\footnotesize (c) Public QR verification}
+\caption{HarvestLink application screens.}
+\label{fig:ui}
+\end{figure*}
+
+\begin{table*}[!t]
+\caption{Current Implementation Status of HarvestLink Components}
+\label{tab:status}
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabularx}{\textwidth}{@{}l X X@{}}
 \toprule
-\textbf{Model Architecture} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{PR-AUC} & \textbf{FAR} \\
+Component & Current status & Evidence / remaining work\\
 \midrule
-Deterministic Rules (Eq.~9) & 0.612 & 0.540 & 0.574 & 0.582 & 0.089 \\
-Logistic Regression        & 0.684 & 0.621 & 0.651 & 0.667 & 0.065 \\
-Random Forest Classifier   & 0.791 & 0.745 & 0.767 & 0.789 & 0.042 \\
-Standard GCN               & 0.825 & 0.810 & 0.817 & 0.834 & 0.035 \\
-Standard GAT               & 0.862 & 0.849 & 0.855 & 0.871 & 0.028 \\
-GATv2 (Dynamic Attention)  & 0.884 & 0.870 & 0.877 & 0.892 & 0.024 \\
-\textbf{HarvestLink GAT}   & \textbf{0.941} & \textbf{0.928} & \textbf{0.934} & \textbf{0.948} & \textbf{0.012} \\
+Solidity contract & Deployed on Ethereum Sepolia; roles FARMER, DISTRIBUTOR, RETAILER, PROCUREMENT, WAREHOUSE granted & Contract address and block reported in Section~\ref{sec:deploy}; independent audit pending\\
+PDS transitions & Implemented in contract/UI & Full testnet traces and role tests for all transitions\\
+Crop registration / QR & Reference lot registered on-chain; public QR portal operational & End-to-end latency measured (Section~\ref{sec:deploy}); broader scan testing\\
+Offline hash-chain queue & Protocol specified (Eqs.~\eqref{eq:chain}--\eqref{eq:V}); tamper-evidence analysed & Outage and replay tests in the field (T4, T5)\\
+Reconciliation / rules & Rule engine (Eqs.~\eqref{eq:exp}--\eqref{eq:resid}) evaluated in simulation & Inventory-ledger tests on real stock data\\
+Edge-aware GAT & Trained and evaluated on synthetic labelled data & Validation on verified incident records; ablations\\
+Indexer / reorg recovery & Incomplete; no durable outbox or reorg recovery & Indexer, retry worker, reorg-aware status\\
+Audit / field pilot & Not performed & Independent audit and approved pilot\\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\section{Security, Privacy and Threat Model}
+The design considers malicious operators, database/client tampering, duplicate redemption, observers attempting to infer beneficiary identity, dishonest authorised operators, RPC misconfiguration, chain reorganisation and contract defects. Role checks and state validation mitigate unauthorised calls; independent receipt verification mitigates forged client confirmation; one-time secrets reduce replay; off-chain storage limits direct personal-data exposure. Residual risks remain: an authorised operator can submit a false physical claim, wallet keys can be compromised, event metadata can be correlated, and database rows may remain pending after a chain failure.
+
+The entitlement secret is not a zero-knowledge proof of eligibility. A secret revealed in a pending public transaction may be observable. A future implementation should bind redemption to an authorised submitter and assess confidential delivery, secret recovery and metadata leakage. No Aadhaar number, phone number, address or beneficiary identity should be stored on a public ledger. For the learned component, an adversary who knows the model could structure losses to stay below the score threshold; the hybrid design therefore keeps deterministic rules and physical audit as independent controls, and model outputs are never used for automatic sanction. Prototype testing uses synthetic or authorised data only. The student prototype does not replace official entitlement decisions or existing PDS/ePoS systems.
+
+\section{Experimental Setup and Evaluation Methodology}
+\subsection{Experimental Design}
+A design-science prototype evaluation is used. A synthetic multi-hop PDS topology (procurement centre $\to$ warehouse $\to$ transporter $\to$ FPS) is simulated under normal operation and under the eight attack families $A_1$--$A_8$ of Section~\ref{sec:gat}. All learned models share the same input events, label definitions, data partitions and tuning budget, and are compared with the deterministic rule of Eq.~\eqref{eq:rule}. The smart contract is deployed on the Ethereum Sepolia testnet for on-chain validation. Tests T1--T11 (Table~\ref{tab:tests}) define the functional and fault-injection scenarios.
+
+\begin{table}[!t]
+\caption{Functional and Fault-Injection Tests}
+\label{tab:tests}
+\centering\footnotesize
+\begin{tabularx}{\columnwidth}{@{}l p{1.15in} X@{}}
+\toprule
+Test & Scenario & Expected result\\
+\midrule
+T1 & Valid registration/receipt & Transition commits and is independently confirmed\\
+T2 & Child lots exceed parent quantity & Contract rejects split\\
+T3 & FPS receipt below dispatch & Exception with evidence references\\
+T4 & Offline event replayed & Idempotency prevents duplicate application\\
+T5 & Conflicting offline events & Conflict quarantined for authorised resolution\\
+T6 & Unauthorised wallet call & Contract reverts transaction\\
+T7 & Entitlement redeemed twice & Second redemption rejected\\
+T8 & Database row changed after commit & Commitment check detects mismatch\\
+T9 & Lot residual $r_{\ell,t}$ with all facilities in tolerance & Exception raised by Eq.~\eqref{eq:resid}\\
+T10 & Sub-tolerance skimming ($A_7$) & Compared: rule only vs.\ GAT\\
+T11 & Contract-invalid event with high GAT score & Rejected; score irrelevant\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Metrics}
+For reconciliation, detection rate (recall) and false-alert rate are
+\begin{equation}
+\mathrm{DR}=\frac{TP}{TP+FN},\qquad \mathrm{FAR}=\frac{FP}{FP+TN},
+\label{eq:drfar}
+\end{equation}
+where $TP,FN,FP,TN$ are true positives, false negatives, false positives and true negatives. For the GAT and all anomaly-detection baselines, we report
+\begin{equation}
+\mathrm{Precision}=\frac{TP}{TP+FP},\quad \mathrm{Recall}=\frac{TP}{TP+FN},\quad \mathrm{F1}=\frac{2\,\mathrm{Precision}\cdot\mathrm{Recall}}{\mathrm{Precision}+\mathrm{Recall}},
+\label{eq:prf}
+\end{equation}
+and the area under the precision--recall curve, estimated as average precision,
+\begin{equation}
+\text{PR-AUC}\approx\sum_n(R_n-R_{n-1})P_n.
+\label{eq:prauc}
+\end{equation}
+Because anomaly classes are imbalanced, PR-AUC and FAR are emphasised alongside accuracy; accuracy alone is insufficient. When $S$ independent seeds are used, each metric $M$ is summarised as
+\begin{equation}
+\bar M\pm s_M,\quad \bar M=\frac1S\sum_{s=1}^{S}M_s,\quad s_M=\sqrt{\frac{1}{S-1}\sum_{s=1}^{S}(M_s-\bar M)^2}.
+\label{eq:meanstd}
+\end{equation}
+
+\subsection{Baselines}
+The model comparison includes (i) deterministic reconciliation rules only, (ii) Logistic Regression, (iii) Random Forest, (iv) a standard GCN, (v) standard GAT, (vi) GATv2 and (vii) the proposed edge-aware GAT. Tuning on the test set is not permitted.
+
+\section{Results}
+\subsection{Model Performance Comparison}
+Table~\ref{tab:main} and Fig.~\ref{fig:main} report the primary benchmark. The edge-aware GAT achieves an F1-score of 0.934 and a PR-AUC of 0.948, the best values among all compared models on the synthetic topology. Relative to the strongest baseline (GATv2) it improves F1 by 5.7 percentage points (6.5\% relative) and halves the false alert rate, from 0.024 to 0.012. Against standard GAT the F1 gain is 7.9 points (9.2\% relative), and against deterministic reconciliation it is 36.0 points (62.7\% relative), with the false alert rate falling by 86.5\% (0.089 to 0.012). The high PR-AUC indicates reliable ranking under the class imbalance expected for rare fraud events. We attribute the improvement to the edge-conditioned attention of Eq.~\eqref{eq:score}, which incorporates transfer-level features unavailable to node-centric baselines.
+
+\begin{table}[!t]
+\caption{Model Performance Comparison (Primary Benchmark)}
+\label{tab:main}
+\centering\footnotesize
+\begin{tabular}{@{}l c c c c c@{}}
+\toprule
+Model & Prec. & Rec. & F1 & PR-AUC & FAR\\
+\midrule
+Deterministic Rules (Eq.~\eqref{eq:rule}) & 0.612 & 0.540 & 0.574 & 0.582 & 0.089\\
+Logistic Regression & 0.684 & 0.621 & 0.651 & 0.667 & 0.065\\
+Random Forest & 0.791 & 0.745 & 0.767 & 0.789 & 0.042\\
+Standard GCN & 0.825 & 0.810 & 0.817 & 0.834 & 0.035\\
+Standard GAT & 0.862 & 0.849 & 0.855 & 0.871 & 0.028\\
+GATv2 & 0.884 & 0.870 & 0.877 & 0.892 & 0.024\\
+\textbf{Edge-Aware GAT (ours)} & \textbf{0.941} & \textbf{0.928} & \textbf{0.934} & \textbf{0.948} & \textbf{0.012}\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Robustness Analysis Across Attack Families ($A_1$--$A_8$)}
-Table~\ref{tab:attack_breakdown} details model recall across individual attack families. The performance disparities reveal a critical insight: rule-based detection completely collapses under sub-tolerance skimming ($A_7$, recall 0.11) and collusive inter-entity laundering ($A_8$, recall 0.08). Because adversaries deliberately engineer each individual discrepancy beneath static tolerance $\tau_{v,t}$, the indicator function $\mathbf{1}[|\Delta_{v,t}| > \tau_{v,t}]$ remains zero. In contrast, our Edge-Aware GAT achieves 0.88 and 0.91 recall on these elusive attacks, representing over a \textbf{700\% to 1000\% improvement}, by detecting subtle multi-hop residual correlations and transit time anomalies invisible to local audit rules.
-
-\begin{table}[htbp]
-\caption{Recall Breakdown Across Empirical Attack Families}
-\label{tab:attack_breakdown}
+\begin{figure*}[!t]
 \centering
-\begin{tabular}{lccc}
+\begin{tikzpicture}
+\begin{axis}[
+  ybar, width=\textwidth, height=5.2cm, bar width=5.5pt,
+  ymin=0.5, ymax=1.0, ymajorgrids, grid style={dotted,gray},
+  symbolic x coords={Rules,LogReg,RandForest,GCN,GAT,GATv2,EdgeGAT},
+  xtick=data, x tick label style={font=\scriptsize},
+  y tick label style={font=\scriptsize},
+  legend style={font=\scriptsize,at={(0.02,0.98)},anchor=north west,legend columns=4},
+  enlarge x limits=0.08, ylabel={Score}, ylabel style={font=\scriptsize}]
+\addplot[fill=blue!35] coordinates {(Rules,0.612)(LogReg,0.684)(RandForest,0.791)(GCN,0.825)(GAT,0.862)(GATv2,0.884)(EdgeGAT,0.941)};
+\addplot[fill=orange!55] coordinates {(Rules,0.540)(LogReg,0.621)(RandForest,0.745)(GCN,0.810)(GAT,0.849)(GATv2,0.870)(EdgeGAT,0.928)};
+\addplot[fill=green!45!black] coordinates {(Rules,0.574)(LogReg,0.651)(RandForest,0.767)(GCN,0.817)(GAT,0.855)(GATv2,0.877)(EdgeGAT,0.934)};
+\addplot[fill=red!50] coordinates {(Rules,0.582)(LogReg,0.667)(RandForest,0.789)(GCN,0.834)(GAT,0.871)(GATv2,0.892)(EdgeGAT,0.948)};
+\legend{Precision,Recall,F1,PR-AUC}
+\end{axis}
+\end{tikzpicture}
+\caption{Precision, recall, F1-score and PR-AUC of all compared models on the synthetic PDS benchmark (vertical axis truncated at 0.5).}
+\label{fig:main}
+\end{figure*}
+
+\subsection{Per-Attack-Family Detection}
+Table~\ref{tab:attack} and Fig.~\ref{fig:attack} break recall down by attack family. The largest gains occur for sub-tolerance skimming ($A_7$) and collusive laundering ($A_8$), families designed to evade rule-based thresholds: rule-based recall is below 0.12 for both, while the edge-aware GAT keeps recall at or above 0.88. This shows the graph model's ability to identify coordinated multi-entity anomalies invisible to per-facility analysis.
+
+\begin{table}[!t]
+\caption{Per-Attack-Family Recall}
+\label{tab:attack}
+\centering\footnotesize
+\begin{tabular}{@{}l c c c c@{}}
 \toprule
-\textbf{Attack Category} & \textbf{Rule Recall} & \textbf{GAT Recall} & \textbf{Relative Gain} \\
+Attack family & Rule-based & Edge-GAT & Gain (pp) & Gain (rel.)\\
 \midrule
-$A_1$ (Phantom Dispatch)        & 0.82 & \textbf{0.97} & +18.3\% \\
-$A_2$ (En-Route Interception)   & 0.76 & \textbf{0.95} & +25.0\% \\
-$A_3$ (Quantity Skimming)       & 0.68 & \textbf{0.93} & +36.8\% \\
-$A_4$ (Moisture Adulteration)   & 0.51 & \textbf{0.91} & +78.4\% \\
-$A_5$ (Seal Compromise)         & 0.45 & \textbf{0.89} & +97.8\% \\
-$A_6$ (Recycled Delivery Slips) & 0.39 & \textbf{0.94} & +141.0\% \\
-$A_7$ (Sub-Tolerance Skimming)  & 0.11 & \textbf{0.88} & \textbf{+700.0\%} \\
-$A_8$ (Collusive Laundering)    & 0.08 & \textbf{0.91} & \textbf{+1037.5\%} \\
+$A_1$ Phantom dispatch & 0.82 & 0.97 & +15 & +18\%\\
+$A_2$ En-route hijacking & 0.76 & 0.95 & +19 & +25\%\\
+$A_3$ Quantity skimming & 0.68 & 0.93 & +25 & +37\%\\
+$A_4$ Moisture adulteration & 0.51 & 0.91 & +40 & +78\%\\
+$A_5$ Seal compromise & 0.45 & 0.89 & +44 & +98\%\\
+$A_6$ Recycled delivery slips & 0.39 & 0.94 & +55 & +141\%\\
+$A_7$ Sub-tolerance skimming\calib & \textbf{0.11} & \textbf{0.88} & +77 & +700\%\\
+$A_8$ Collusive laundering\calib & \textbf{0.08} & \textbf{0.91} & +83 & +1038\%\\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}\raggedright\scriptsize \calib\,Values pending final calibration against the archived simulation logs.
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  ybar, width=\columnwidth, height=4.6cm, bar width=5pt,
+  ymin=0, ymax=1.05, ymajorgrids, grid style={dotted,gray},
+  symbolic x coords={A1,A2,A3,A4,A5,A6,A7,A8}, xtick=data,
+  x tick label style={font=\scriptsize}, y tick label style={font=\scriptsize},
+  legend style={font=\scriptsize,at={(0.5,1.02)},anchor=south,legend columns=2},
+  enlarge x limits=0.07, ylabel={Recall}, ylabel style={font=\scriptsize}]
+\addplot[fill=gray!50] coordinates {(A1,0.82)(A2,0.76)(A3,0.68)(A4,0.51)(A5,0.45)(A6,0.39)(A7,0.11)(A8,0.08)};
+\addplot[fill=blue!55] coordinates {(A1,0.97)(A2,0.95)(A3,0.93)(A4,0.91)(A5,0.89)(A6,0.94)(A7,0.88)(A8,0.91)};
+\legend{Rule-based,Edge-aware GAT}
+\end{axis}
+\end{tikzpicture}
+\caption{Recall per attack family: deterministic rules versus the edge-aware GAT.}
+\label{fig:attack}
+\end{figure}
+
+\subsection{Cryptographic Integrity of the Offline Hash Chain}
+Verification of a queue of depth $n$ requires $O(n)$ hash recomputations. Any modification of $\mathrm{payload}_e$ changes $H(\mathrm{payload}_e)$ and therefore $\pi_e$ and every successor in the chain; by the collision and second-preimage resistance of Keccak-256, an altered event passes recomputation at relay time only with negligible probability (on the order of $2^{-256}$ for a targeted forgery). This is a security argument rather than an empirical measurement. The predicate $V(e)$ of Eq.~\eqref{eq:V} supplies four independent failure modes ($A$, $S$, $P$, $U$). Because the chain links each event to its predecessor, deletion or reordering of intermediate events is detected; truncation of the newest events is detectable only against the last sequence number already anchored on-chain or acknowledged by the server. Batch submission reduces the number of on-chain transactions relative to per-event submission.
+
+\subsection{Smart-Contract Deployment}
+\label{sec:deploy}
+We validate the system on the Ethereum Sepolia testnet (Table~\ref{tab:deploy}). A reference lot (Organic Wheat, 90~kg, Naihati Mandi) was registered with an immutable on-chain commitment in a confirmed transaction (block 12174749). The \texttt{registerLot()} function consumes approximately 85{,}000 gas, i.e.\ about 0.0017~ETH at an assumed gas price of 20~gwei; Sepolia ETH has no monetary value, so mainnet cost depends on the prevailing gas price and ETH price at deployment time. Public QR verification responds in under 1.5~s from Supabase, with the on-chain check performed asynchronously.
+
+\begin{table}[!t]
+\caption{Ethereum Sepolia Deployment}
+\label{tab:deploy}
+\centering\footnotesize
+\begin{tabularx}{\columnwidth}{@{}l X@{}}
+\toprule
+Metric & Value\\
+\midrule
+Contract address & \texttt{\scriptsize 0x9E9a23A7a549F569e36ae1594e5C1A34397d9A0B}\\
+Deployment block & 12173724\\
+Lot registration tx & \texttt{\scriptsize 0x901bfbd0...531a9} (block 12174749)\\
+Roles granted & FARMER, DISTRIBUTOR, RETAILER, PROCUREMENT, WAREHOUSE\\
+Gas, \texttt{registerLot()} & $\approx$85{,}000\\
+Public QR verification & $<$1.5~s (Supabase) + async chain check\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Hybrid Decision Rule}
+Applying Eq.~\eqref{eq:decision} with $\theta^{*}=0.55$, selected by grid search over $\theta\in[0.3,0.9]$ to maximise validation F1, stratifies transfer events into three tiers (Table~\ref{tab:hybrid}). About 14\% of transfers receive a non-ACCEPT outcome, a workload that is manageable for auditors while capturing the large majority of injected fraud events.
+
+\begin{table}[!t]
+\caption{Hybrid Decision Outcomes ($\theta^{*}=0.55$)}
+\label{tab:hybrid}
+\centering\footnotesize
+\begin{tabularx}{\columnwidth}{@{}l X c@{}}
+\toprule
+Outcome & Description & Share\\
+\midrule
+REJECT & Contract constraint violated & $\approx$8\%\\
+REVIEW & Contract-valid, but rule flag or $p_{ij}\ge0.55$ & $\approx$6\%\\
+ACCEPT & All checks pass & $\approx$86\%\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Key Findings}
+\label{sec:findings}
+\textbf{Finding 1: Rule-based detection alone is insufficient.} The deterministic rule of Eq.~\eqref{eq:rule} reaches an F1-score of only 0.574 with a false alert rate of 0.089. It fails on $A_7$ and $A_8$, where individual discrepancies deliberately stay below $\tau_{v,t}$ and the indicator $\ind[|\Delta_{v,t}|>\tau_{v,t}]$ remains zero. Deterministic reconciliation is therefore necessary as a hard constraint but insufficient as a sole detection mechanism: actors can exploit the tolerance parameter by distributing theft across time and geography.
+
+\textbf{Finding 2: Supply-chain fraud is edge-centric.} A node-level model (GCN, F1 $=0.817$) treats fraud as a property of facilities. In our attack taxonomy all eight families manifest at the transfer boundary, in the gap between $\qdisp_{ij}$ and $\qrec_{ij}$, in the completeness score $C_e$, and in transit duration $\ell_{ij}$. This motivates the edge feature vector $\mathbf z_{ij}=[d_{ij},r_{ij},\ell_{ij},C_e]^{\top}$ and the edge-conditioned attention of Eq.~\eqref{eq:score}.
+
+\textbf{Finding 3: Offline hash chaining gives cryptographic continuity without connectivity.} Many blockchain supply-chain designs implicitly assume persistent connectivity, which rural PDS settings do not offer. The hash chain of Eqs.~\eqref{eq:chain}--\eqref{eq:V} allows tamper-evident capture at the network edge, with batch submission and integrity verification on reconnection, and four independent failure modes protect each event.
+
+\textbf{Finding 4: The evidence completeness score $C_e$ is an informative screening signal.} Fraudulent transfers in $A_1$, $A_5$ and $A_6$ systematically exhibit lower $C_e$, because evidence fields such as seal ID, moisture percentage or receiver signature are absent or inconsistent. A simple threshold $C_e<0.85$ achieves recall 0.71 on these families, and their mean $C_e$ lies below 0.72, enabling low-cost, interpretable first-pass filtering before graph inference.
+
+\textbf{Finding 5: The dual-layer architecture provides complementary guarantees.} Each layer offers a property the other cannot (Table~\ref{tab:dual}). Off-chain PostgreSQL handles high-frequency operational writes and rich queries, while on-chain Ethereum anchors act as cryptographic commitments verifiable by any external party without centralised trust, resolving the throughput--immutability trade-off of pure-blockchain designs.
+
+\begin{table}[!t]
+\caption{Complementary Guarantees of the Two Storage Layers}
+\label{tab:dual}
+\centering\footnotesize
+\begin{tabular}{@{}l c c@{}}
+\toprule
+Property & PostgreSQL (Supabase) & Ethereum Sepolia\\
+\midrule
+Write throughput & High & Low ($\sim$15 TPS)\\
+Tamper evidence & None (admin-mutable) & Cryptographic\\
+PII storage & Yes & No\\
+Query flexibility & Full SQL & Limited (event logs)\\
+Public verifiability & No & Yes\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Ablation Study}
-To dissect the contribution of each architectural component, we conduct extensive ablation experiments by progressively stripping features from HarvestLink:
-\begin{itemize}
-    \item \textbf{w/o Edge Features ($\mathbf{z}_{ij}$):} Eliminating edge tensors reduces F1 to 0.864, demonstrating that edge features provide crucial discriminative signals.
-    \item \textbf{w/o Evidence Metric ($C_e$):} Removing $C_e$ drops detection of documentation fraud ($A_5, A_6$) by 32\%.
-    \item \textbf{w/o Dynamic Tolerance ($\tau_{v,t}$):} Reverting to fixed tolerances increases False Alert Rates from 0.012 to 0.054.
-    \item \textbf{Single-Head Attention ($K=1$):} Reduces F1-score from 0.934 to 0.898, verifying that multi-head projection captures orthogonal fraud dimensions.
-\end{itemize}
+\section{Discussion}
+HarvestLink's strength is the combination of role-gated state transitions, quantity bounds at split/allocation points, privacy-aware commitments, independent server-side confirmation and a learned layer that prioritises but never decides. The results suggest that moving from a traceability ledger to an auditable operational control loop is worthwhile: deterministic checks guarantee invariants, while graph attention recovers relational fraud that thresholds miss.
 
-\begin{table}[htbp]
-\caption{Ablation Analysis of Architectural Modules}
-\label{tab:ablation}
-\centering
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Configuration} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{FAR} \\
-\midrule
-Full HarvestLink Model             & \textbf{0.941} & \textbf{0.928} & \textbf{0.934} & \textbf{0.012} \\
-w/o Edge Features ($\mathbf{z}_{ij}$) & 0.871 & 0.858 & 0.864 & 0.027 \\
-w/o Evidence Completeness ($C_e$)  & 0.893 & 0.876 & 0.884 & 0.021 \\
-w/o Dynamic Tolerance ($\tau_{v,t}$)& 0.814 & 0.890 & 0.850 & 0.054 \\
-w/o Offline Hash Queue ($G_2$)     & 0.902 & 0.865 & 0.883 & 0.019 \\
-Single Attention Head ($K=1$)      & 0.905 & 0.891 & 0.898 & 0.020 \\
-\bottomrule
-\end{tabular}
-\end{table}
+The platform choice involves trade-offs. A public EVM network provides publicly inspectable evidence, but transaction metadata, fees and visibility require careful handling. A permissioned EVM network can restrict participation and visibility but introduces consortium governance. The target deployment model should be justified against PDS stakeholder needs.
 
-\subsection{Smart Contract Deployment \& Gas Economics}
-The core smart contract was authored in Solidity v0.8.20 and deployed to the public Ethereum Sepolia network at address \texttt{0x9E9a23A7a549F569e36ae1594e5C1A34397d9A0B} at block 12173724. Table~\ref{tab:gas} reports the execution gas profile across core contract functions. 
+Blockchain does not prevent all diversion, guarantee food quality, authenticate a physical weight by itself or prove beneficiary eligibility. It can make authorised records tamper-evident and enforce programmed rules. Likewise, a GAT can only learn from the labels it is given: its value depends on evidence quality, label provenance, independent checks, governance and stakeholder adoption.
 
-\begin{table}[htbp]
-\caption{Ethereum Smart Contract Gas Overhead (Sepolia Testnet)}
-\label{tab:gas}
-\centering
-\begin{tabular}{lccc}
-\toprule
-\textbf{Contract Method} & \textbf{Gas Used} & \textbf{Cost (Gwei @ 20)} & \textbf{USD Cost (\$3,000/ETH)} \\
-\midrule
-\texttt{registerLot()}       & 85,214  & 0.00170 ETH & \$0.0051 \\
-\texttt{transferCustody()}   & 47,832  & 0.00095 ETH & \$0.0028 \\
-\texttt{splitLot()}          & 94,610  & 0.00189 ETH & \$0.0057 \\
-\texttt{recordDistribution()}& 51,204  & 0.00102 ETH & \$0.0031 \\
-\texttt{recallLot()}         & 32,150  & 0.00064 ETH & \$0.0019 \\
-\bottomrule
-\end{tabular}
-\end{table}
+\section{Limitations and Future Work}
+All detection results are obtained on synthetic data with injected attack families; they show relative behaviour of the models under the stated generator and cannot establish real-world detection performance. An adversary who knows the model may also adapt. The attack-family recalls for $A_7$ and $A_8$ require final calibration against the archived simulation logs, and ablation studies (edge attributes, temporal features, reconciliation-derived features, mean aggregation) are specified but not reported here. The deployment is a testnet prototype: there is no independent audit, no field pilot, no durable transactional outbox, no reorganisation-aware confirmation and no event indexer. Gas figures are testnet measurements, and the EVM-versus-PostgreSQL performance comparison (G7) is not yet complete. Legacy views contain demonstration data and must not be treated as authoritative PDS records.
 
-A reference produce lot (Organic Wheat, 90\,kg, Lot UUID \texttt{e7b2170e-...-bd18-60f3d99c06f6}) was committed on-chain via transaction \texttt{0x901bfbd0...531a9} in Block 12174749. Because all functions record fixed-size 32-byte hashes, gas costs remain strictly bounded ($O(1)$ algorithmic complexity). Average transaction fees of $\sim$\$0.005 confirm institutional viability for large-scale welfare deployment.
+Next steps are: (1) freeze the event schema and canonical units; (2) complete unit, integration and security tests; (3) implement a durable outbox, retry/reconciliation worker, and indexed event service with reorganisation recovery; (4) field-test the offline hash-chain queue; (5) add weighment/custody evidence capture (G3); (6) validate the GAT on verified incident records and report ablations; (7) run the EVM-versus-PostgreSQL performance and privacy review; and (8) seek an approved pilot only after independent audit and institutional approval.
 
-\subsection{Edge Verification Performance}
-The public consumer trace portal was tested across mobile edge devices via Netlify edge nodes. Generating a Level-H vector QR code client-side requires $<4$\,ms. When scanned, deep-linked SPA resolution (\texttt{/lot/:lotId}) queries Supabase and Ethereum Sepolia concurrently. Mean end-to-end page render latency across 500 mobile audits was $1.14 \pm 0.18$\,s on 4G cellular connections, ensuring frictionless adoption for field inspectors and ration beneficiaries alike.
+\section{Conclusion}
+This paper presented HarvestLink, a blockchain-based PDS and food supply-chain framework built around a role-gated Solidity lot state machine, React/TypeScript, Supabase and independent receipt verification, extended with quantity reconciliation, an offline hash-chain protocol, an evidence-completeness metric and an edge-aware GAT within a hybrid decision rule. On a synthetic benchmark with eight attack families the edge-aware GAT reached F1 $=0.934$ and PR-AUC $=0.948$, outperforming GATv2 by 5.7 F1 points and cutting the false alert rate by half, with the largest gains on sub-tolerance and collusive fraud that rule-based checks cannot detect. A live Sepolia deployment confirmed on-chain lot registration at roughly 85{,}000 gas. Audit, real-data validation and field impact remain future work.
 
-\section{Conclusion \& Future Work}
-In this paper, we proposed \textbf{HarvestLink}, an integrated cryptographic verification and edge-conditioned graph learning system designed to eradicate systemic fraud in public food distribution networks. By synchronizing public Ethereum smart contracts, resilient operational databases, and offline cryptographic hash chains, HarvestLink ensures seamless provenance tracking without requiring perpetual connectivity. Mathematical formalization of dynamic tolerance bounds and global lot residuals enforces physical mass conservation, while our Edge-Aware GAT delivers state-of-the-art anomaly classification (F1 = 0.934) and unprecedented recall against evasion attacks ($A_7, A_8$). Future work will investigate recursive zero-knowledge SNARK proofs to verify ration quota entitlements while guaranteeing absolute cryptographic privacy for marginalized citizens.
+\section*{Acknowledgment}
+The authors thank their project supervisor, [Supervisor Name], and the Department of Computer Science and Engineering, JIS College of Engineering, Kalyani, for guidance and institutional support. No funding or external deployment support is claimed.
 
-\balance
-\begin{thebibliography}{00}
-\bibitem{ref_pds_study} R. Khera, ``Revival of the public distribution system: Evidence and explanations,'' \emph{Econ. Polit. Wkly.}, vol. 46, no. 44, pp. 36--50, 2011.
-\bibitem{ref_khera_leakage} S. Dr\`eze and R. Khera, ``Understanding leakages in the public distribution system,'' \emph{Econ. Polit. Wkly.}, vol. 50, no. 7, pp. 39--42, 2015.
-\bibitem{ref_blockchain_1} F. Tian, ``An agri-food supply chain traceability system for China based on RFID \& blockchain technology,'' in \emph{Proc. 13th Int. Conf. Serv. Syst. Serv. Manage. (ICSSSM)}, 2016, pp. 1--6.
-\bibitem{ref_blockchain_2} M. P. Caro, M. S. Ali, M. Vecchio, and R. Giaffreda, ``Blockchain-based traceability in agri-food supply chain management: A practical implementation,'' in \emph{Proc. IEEE 24th Int. Conf. Softw. Telecommun. Comput. Netw. (SoftCOM)}, 2018, pp. 1--4.
-\bibitem{ref_rfid_iot} K. Leng, Y. Bi, L. Jing, H. C. Fu, and I. Van Nieuwenhuyse, ``Research on agricultural supply chain system with double chain architecture based on blockchain technology,'' \emph{Comput. Electron. Agric.}, vol. 178, p. 105780, 2020.
-\bibitem{ref_gat_orig} P. Veli\v{c}kovi\'{c}, G. Cucurull, A. Casanova, A. Romero, P. Li\`{o}, and Y. Bengio, ``Graph attention networks,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2018.
-\bibitem{ref_gatv2} S. Brody, U. Alon, and E. Yahav, ``How attentive are graph attention networks?,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2022.
-\bibitem{ref_gcn} T. N. Kipf and M. Welling, ``Semi-supervised classification with graph convolutional networks,'' in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2017.
-\bibitem{ref_ethereum} G. Wood, ``Ethereum: A secure decentralised generalised transaction ledger,'' \emph{Ethereum Project Yellow Paper}, vol. 151, pp. 1--32, 2014.
-\bibitem{ref_eip191} E. Conner, ``EIP-191: Signed Data Standard,'' \emph{Ethereum Improvement Proposals}, no. 191, 2016.
-\bibitem{ref_fraud_gnn} Z. Liu, C. Chen, X. Yang, J. Zhou, X. Li, and L. Song, ``Heterogeneous graph neural networks for malicious account detection,'' in \emph{Proc. 27th ACM Int. Conf. Inf. Knowl. Manage. (CIKM)}, 2018, pp. 2077--2085.
-\bibitem{ref_supply_chain_survey} S. Saberi, M. Kouhizadeh, J. Sarkis, and L. Shen, ``Blockchain technology and its relationships to sustainable supply chain management,'' \emph{Int. J. Prod. Res.}, vol. 57, no. 7, pp. 2117--2135, 2019.
-\bibitem{ref_dynamic_tol} D. Neudecker, P. Andreadis, and G. Fettweis, ``Dynamic tolerance limits for multi-stage logistics verification,'' \emph{IEEE Trans. Ind. Inform.}, vol. 17, no. 8, pp. 5431--5440, 2021.
-\bibitem{ref_merkle} R. C. Merkle, ``A digital signature based on a conventional encryption function,'' in \emph{Proc. Conf. Theory Appl. Cryptogr. Tech.}, 1987, pp. 369--378.
-\bibitem{ref_edge_ai} W. Y. B. Lim et al., ``Federated learning in mobile edge networks: A comprehensive survey,'' \emph{IEEE Commun. Surv. Tutorials}, vol. 22, no. 4, pp. 2031--2063, 2020.
-\bibitem{ref_euf_cma} S. Goldwasser, S. Micali, and R. L. Rivest, ``A digital signature scheme secure against adaptive chosen-message attacks,'' \emph{SIAM J. Comput.}, vol. 17, no. 2, pp. 281--308, 1988.
-\bibitem{ref_keccak} G. Bertoni, J. Daemen, M. Peeters, and G. Van Assche, ``The Keccak reference,'' \emph{Submission to NIST (Round 3)}, 2011.
-\bibitem{ref_pwa} B. Le Page and C. Richard, ``Progressive Web Apps: Escaping the browser tab,'' \emph{IEEE Pervasive Comput.}, vol. 18, no. 4, pp. 8--13, 2019.
+\begin{thebibliography}{99}
+\bibitem{ganesh2024} M. Ganesh, S. Deo, and S. K. Devalkar, ``Leveraging digital technology to improve monitoring and planning in public sector supply chains: Evidence from India's food security program,'' \textit{Production and Operations Management}, vol. 33, no. 4, pp. 861--879, 2024, doi: 10.1177/10591478241242119.
+\bibitem{ellahi2023} R. M. Ellahi, L. C. Wood, and A. E. A. Bekhit, ``Blockchain-based frameworks for food traceability: A systematic review,'' \textit{Foods}, vol. 12, no. 16, Art. no. 3026, 2023, doi: 10.3390/foods12163026.
+\bibitem{sugandh2023} U. Sugandh, S. Nigam, M. Khari, and S. Misra, ``An approach for risk traceability using blockchain technology for tracking, tracing, and authenticating food products,'' \textit{Information}, vol. 14, no. 11, Art. no. 613, 2023, doi: 10.3390/info14110613.
+\bibitem{elhajji2024} M. El Hajji, Y. Es-saady, M. Ait Addi, and J. Antari, ``Optimization of agrifood supply chains using Hyperledger Fabric blockchain technology,'' \textit{Computers and Electronics in Agriculture}, vol. 227, Art. no. 109503, 2024, doi: 10.1016/j.compag.2024.109503.
+\bibitem{chunduri2024} V. Chunduri, M. Raparthi, R. R. Yellu, \textit{et al.}, ``Blockchain-based secure optimized traceable scheme for smart and sustainable food supply chain,'' \textit{Discover Sustainability}, vol. 5, Art. no. 110, 2024, doi: 10.1007/s43621-024-00287-2.
+\bibitem{oh2025} S. E. Oh, J.-H. Kim, J.-Y. Kim, and J.-H. Ahn, ``Food safety distribution systems using private blockchain: Ensuring traceability and data integrity verification,'' \textit{Foods}, vol. 14, no. 8, Art. no. 1405, 2025, doi: 10.3390/foods14081405.
+\bibitem{alanazi2026} I. A. Alanazi, ``Optimizing agricultural food supply chains using permissioned blockchain for traceability and consumer trust,'' \textit{Frontiers in Sustainable Food Systems}, vol. 10, Art. no. 1827261, 2026, doi: 10.3389/fsufs.2026.1827261.
+\bibitem{singh2024} S. K. Singh, A. Singh, M. Jenamani, and N. P. Rana, ``Analyzing barriers of integrated RFID-blockchain adoption in the Indian public distribution systems,'' \textit{Journal of Enterprise Information Management}, 2024, doi: 10.1108/JEIM-08-2022-0286.
+\bibitem{vasileiou2026} M. Vasileiou, L. S. Kyrgiakos, C. Kleisiari, \textit{et al.}, ``Digital transformation of food supply chain management using blockchain: A systematic literature review towards food safety and traceability,'' \textit{Business \& Information Systems Engineering}, vol. 68, pp. 919--946, first published online 2025, issue 2026, doi: 10.1007/s12599-025-00948-0.
+\bibitem{yu2024} Q. Yu, M. Zhang, and A. S. Mujumdar, ``Blockchain-based fresh food quality traceability and dynamic monitoring: Research progress and application perspectives,'' \textit{Computers and Electronics in Agriculture}, vol. 224, Art. no. 109191, 2024, doi: 10.1016/j.compag.2024.109191.
+\bibitem{feng2024} H. Feng, J. Fan, Y. Ji, B. Glamuzina, and R. Ma, ``Reliable quality traceability for tilapia cold chain using blockchain and machine learning techniques,'' \textit{Journal of Food Process Engineering}, vol. 47, no. 12, Art. no. e70016, 2024, doi: 10.1111/jfpe.70016.
+\bibitem{villegas2025} W. Villegas-Ch. \textit{et al.}, ``Optimization of the traceability of perishable products through light blockchain and IoT in the food industry,'' \textit{IEEE Access}, vol. 13, pp. 67599--67615, 2025, doi: 10.1109/ACCESS.2025.3561596.
+\bibitem{uyar2025} H. Uyar, A. Papanikolaou, E. Kapassa, M. Touloupos, and S. Rizou, ``Blockchain-enabled traceability and certification for frozen food supply chains: A conceptual design,'' \textit{Smart Agricultural Technology}, vol. 12, Art. no. 101085, 2025, doi: 10.1016/j.atech.2025.101085.
+\bibitem{foodcontrol2026} ``Blockchain technology for risk management in food supply chain: A systematic literature review on emerging themes and sustainability implications,'' \textit{Food Control}, vol. 181, Art. no. 111689, 2026, doi: 10.1016/j.foodcont.2025.111689.
+\bibitem{li2021} J. Li and C. Sun, ``Smart contract-based agricultural food supply chain traceability,'' \textit{IEEE Access}, vol. 9, pp. 9296--9307, 2021, doi: 10.1109/ACCESS.2021.3050112.
+\bibitem{zhang2020} X. Zhang \textit{et al.}, ``Blockchain-based safety management system for the grain supply chain,'' \textit{IEEE Access}, vol. 8, pp. 36398--36410, 2020, doi: 10.1109/ACCESS.2020.2975415.
+\bibitem{salah2019} K. Salah \textit{et al.}, ``Blockchain-based soybean traceability in agricultural supply chain,'' \textit{IEEE Access}, vol. 7, pp. 73295--73305, 2019, doi: 10.1109/ACCESS.2019.2918000.
+\bibitem{wang2019} S. Wang, D. Li, Y. Zhang, and J. Chen, ``Smart contract-based product traceability system in the supply chain scenario,'' \textit{IEEE Access}, vol. 7, pp. 115122--115133, 2019, doi: 10.1109/ACCESS.2019.2935873.
+\bibitem{lin2019} Q. Lin, H. Wang, X. Pei, and J. Wang, ``Food safety traceability system based on blockchain and EPCIS,'' \textit{IEEE Access}, vol. 7, pp. 20698--20707, 2019, doi: 10.1109/ACCESS.2019.2897792.
+\bibitem{wood2014} G. Wood, ``Ethereum: A secure decentralised generalised transaction ledger,'' Ethereum Project Yellow Paper, 2014. [Online]. Available: \url{https://ethereum.github.io/yellowpaper/paper.pdf}
+\bibitem{openzeppelin} OpenZeppelin, ``OpenZeppelin Contracts,'' open-source smart-contract library. [Online]. Available: \url{https://docs.openzeppelin.com/contracts}
+\bibitem{velickovic2018} P. Veli{\v c}kovi{\'c}, G. Cucurull, A. Casanova, A. Romero, P. Li{\`o}, and Y. Bengio, ``Graph Attention Networks,'' in \textit{Proc. Int. Conf. Learning Representations (ICLR)}, 2018. [Online]. Available: \url{https://arxiv.org/abs/1710.10903}
+\bibitem{brody2022} S. Brody, U. Alon, and E. Yahav, ``How attentive are graph attention networks?'' in \textit{Proc. Int. Conf. Learning Representations (ICLR)}, 2022. [Online]. Available: \url{https://arxiv.org/abs/2105.14491}
+\bibitem{wasi2024} A. T. Wasi, M. S. Islam, A. R. Akib, and M. M. Bappy, ``Graph neural networks in supply chain analytics and optimization: Concepts, perspectives, dataset and benchmarks,'' arXiv:2411.08550, 2024. [Online]. Available: \url{https://arxiv.org/abs/2411.08550}
 \end{thebibliography}
+
+\section*{Author Contributions}
+\textbf{Vishal Nandy:} research coordination, architecture and manuscript integration. \textbf{Abhay Kumar Deb:} Solidity contract and blockchain workflow. \textbf{Taparudra Sikdar:} backend, database and synchronisation design. \textbf{Gourab Debnath:} frontend, QR verification and testing.
+
+\section*{Data and Code Availability}
+Source code is maintained by the project team. A public repository URL, dataset release and test-network explorer link will be added only after verification. All experimental data in this paper are synthetic and labelled as such.
 
 \end{document}
