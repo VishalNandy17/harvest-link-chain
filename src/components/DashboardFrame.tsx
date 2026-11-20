@@ -85,14 +85,14 @@ export function DashboardFrame({ children }: { children: React.ReactNode }) {
               <SelectValue placeholder="Select Role" />
             </SelectTrigger>
             <SelectContent className="bg-slate-800 border-slate-700 text-slate-100">
-              <SelectItem value={UserRole.FARMER}>🌾 Farmer / Mandi</SelectItem>
-              <SelectItem value={UserRole.DISTRIBUTOR}>🚚 Transporter / Depot</SelectItem>
-              <SelectItem value={UserRole.RETAILER}>🏬 Retailer (Fair Price Shop)</SelectItem>
-              <SelectItem value={UserRole.CONSUMER}>👤 Beneficiary / Consumer</SelectItem>
-              <SelectItem value={UserRole.PROCUREMENT}>📋 Procurement Officer</SelectItem>
-              <SelectItem value={UserRole.WAREHOUSE}>🏛️ Warehouse Manager</SelectItem>
-              <SelectItem value={UserRole.AUDITOR}>🔍 Vigilance Auditor</SelectItem>
-              <SelectItem value={UserRole.ADMIN}>⚙️ Platform Admin</SelectItem>
+              <SelectItem value={UserRole.FARMER}>Farmer / Mandi</SelectItem>
+              <SelectItem value={UserRole.DISTRIBUTOR}>Transporter / Depot</SelectItem>
+              <SelectItem value={UserRole.RETAILER}>Retailer (Fair Price Shop)</SelectItem>
+              <SelectItem value={UserRole.CONSUMER}>Beneficiary / Consumer</SelectItem>
+              <SelectItem value={UserRole.PROCUREMENT}>Procurement Officer</SelectItem>
+              <SelectItem value={UserRole.WAREHOUSE}>Warehouse Manager</SelectItem>
+              <SelectItem value={UserRole.AUDITOR}>Vigilance Auditor</SelectItem>
+              <SelectItem value={UserRole.ADMIN}>Platform Admin</SelectItem>
             </SelectContent>
           </Select>
         </div>

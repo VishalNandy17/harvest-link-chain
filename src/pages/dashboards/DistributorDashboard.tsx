@@ -462,7 +462,7 @@ const DistributorDashboard = () => {
               <DollarSign className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">â‚¹1.2M</div>
+              <div className="text-2xl font-bold">₹1.2M</div>
               <p className="text-xs text-muted-foreground">This month</p>
             </CardContent>
           </Card>

@@ -308,8 +308,18 @@ export const ReconciliationTab: React.FC = () => {
           {residualResult && (
             <div className={`mt-4 rounded-lg border p-4 ${residualResult.isResidualException ? 'border-destructive bg-destructive/10' : 'border-green-500/30 bg-green-500/5'}`}>
               <div className="flex items-center justify-between">
-                <span className="font-semibold">
-                  {residualResult.isResidualException ? '🚨 Systemic Lot Residual Leakage Detected!' : '✅ Global Lot Stock Fully Accounted'}
+                <span className="font-semibold flex items-center gap-2">
+                  {residualResult.isResidualException ? (
+                    <>
+                      <AlertCircle className="h-5 w-5 text-destructive" />
+                      <span>Systemic Lot Residual Leakage Detected!</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <span>Global Lot Stock Fully Accounted</span>
+                    </>
+                  )}
                 </span>
                 <span className="font-mono text-sm">
                   Residual: {residualResult.residual.toFixed(2)} kg (Tolerance: ±{residualResult.tolerance.toFixed(2)} kg)

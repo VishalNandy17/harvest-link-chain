@@ -586,11 +586,11 @@ const FarmerDashboard = () => {
     const lastMonthValue = soldValue * 0.4; // Mock: assume 40% of sales last month
 
     return {
-      total: `â‚¹${totalValue.toLocaleString()}`,
-      pending: `â‚¹${pendingValue.toLocaleString()}`,
-      sold: `â‚¹${soldValue.toLocaleString()}`,
-      thisMonth: `â‚¹${thisMonthValue.toLocaleString()}`,
-      lastMonth: `â‚¹${lastMonthValue.toLocaleString()}`,
+      total: `₹${totalValue.toLocaleString()}`,
+      pending: `₹${pendingValue.toLocaleString()}`,
+      sold: `₹${soldValue.toLocaleString()}`,
+      thisMonth: `₹${thisMonthValue.toLocaleString()}`,
+      lastMonth: `₹${lastMonthValue.toLocaleString()}`,
       activeListings: products.length
     };
   };
@@ -610,7 +610,7 @@ const FarmerDashboard = () => {
     quantity: '1 unit', // Could be enhanced with actual quantity data
     date: new Date(product.createdAt * 1000).toLocaleDateString(),
     status: getProductStatus(product.status),
-    price: `â‚¹${convertETHToINR(product.price).toLocaleString()}`,
+    price: `₹${convertETHToINR(product.price).toLocaleString()}`,
     verified: true,
     blockchainId: product.id
   }));
@@ -929,7 +929,7 @@ const FarmerDashboard = () => {
                           <div>
                             <h3 className="font-medium">Batch #{batch.id}</h3>
                             <p className="text-sm text-muted-foreground">
-                              {batch.productCount} products â€¢ Created {new Date(batch.createdAt).toLocaleDateString()}
+                              {batch.productCount} products • Created {new Date(batch.createdAt).toLocaleDateString()}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               Location: {batch.location}
@@ -960,7 +960,7 @@ const FarmerDashboard = () => {
                           <div>
                             <h3 className="font-medium">Batch #{batch.id}</h3>
                             <p className="text-sm text-muted-foreground">
-                              {batch.productIds.length} products â€¢ Created {new Date(batch.createdAt * 1000).toLocaleDateString()}
+                              {batch.productIds.length} products • Created {new Date(batch.createdAt * 1000).toLocaleDateString()}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               Location: {batch.location}
@@ -1024,7 +1024,7 @@ const FarmerDashboard = () => {
                       <Label htmlFor="product-price">Price (INR) *</Label>
                       <div className="flex">
                         <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground">
-                          â‚¹
+                          ₹
                         </span>
                         <Input
                           id="product-price"
@@ -1119,8 +1119,8 @@ const FarmerDashboard = () => {
                     </Button>
                     <p className="text-xs text-muted-foreground">
                       {walletConnected 
-                        ? "✓ Sepolia Wallet Connected: Provenance hash will be committed to blockchain." 
-                        : "✓ Cloud Verified: Lot saved to Supabase and immediately verifiable via dynamic QR."}
+                        ? "Sepolia Wallet Connected: Provenance hash will be committed to blockchain." 
+                        : "Cloud Verified: Lot saved to Supabase and immediately verifiable via dynamic QR."}
                     </p>
                   </div>
                 </form>
@@ -1171,7 +1171,7 @@ const FarmerDashboard = () => {
                             <div className="text-sm text-muted-foreground">To: Agri Distributors</div>
                           </div>
                           <div className="text-right">
-                            <div className="font-medium text-green-600">+â‚¹15,000</div>
+                            <div className="font-medium text-green-600">+₹15,000</div>
                             <div className="text-sm text-muted-foreground">Oct 15, 2023</div>
                           </div>
                         </div>
@@ -1181,7 +1181,7 @@ const FarmerDashboard = () => {
                             <div className="text-sm text-muted-foreground">To: FoodChain Inc.</div>
                           </div>
                           <div className="text-right">
-                            <div className="font-medium text-green-600">+â‚¹10,500</div>
+                            <div className="font-medium text-green-600">+₹10,500</div>
                             <div className="text-sm text-muted-foreground">Oct 10, 2023</div>
                           </div>
                         </div>
@@ -1191,7 +1191,7 @@ const FarmerDashboard = () => {
                             <div className="text-sm text-muted-foreground">To: Fresh Markets</div>
                           </div>
                           <div className="text-right">
-                            <div className="font-medium text-orange-500">Pending â‚¹1,500</div>
+                            <div className="font-medium text-orange-500">Pending ₹1,500</div>
                             <div className="text-sm text-muted-foreground">Oct 5, 2023</div>
                           </div>
                         </div>
@@ -1245,21 +1245,21 @@ const FarmerDashboard = () => {
                         <div className="flex justify-between items-center">
                           <div className="font-medium">Wheat</div>
                           <div className="flex items-center">
-                            <span className="font-medium mr-2">â‚¹22/kg</span>
+                            <span className="font-medium mr-2">₹22/kg</span>
                             <Badge className="bg-green-500">+10%</Badge>
                           </div>
                         </div>
                         <div className="flex justify-between items-center">
                           <div className="font-medium">Rice</div>
                           <div className="flex items-center">
-                            <span className="font-medium mr-2">â‚¹38/kg</span>
+                            <span className="font-medium mr-2">₹38/kg</span>
                             <Badge className="bg-green-500">+8%</Badge>
                           </div>
                         </div>
                         <div className="flex justify-between items-center">
                           <div className="font-medium">Tomatoes</div>
                           <div className="flex items-center">
-                            <span className="font-medium mr-2">â‚¹12/kg</span>
+                            <span className="font-medium mr-2">₹12/kg</span>
                             <Badge className="bg-red-500">-5%</Badge>
                           </div>
                         </div>
@@ -1306,7 +1306,7 @@ const FarmerDashboard = () => {
             </DialogDescription>
           </DialogHeader>
           <Button onClick={registerCropOnEthereum} disabled={isCreatingProduct} className="w-full">
-            {isCreatingProduct ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Waiting for Ethereum confirmationâ€¦</> : 'Submit Ethereum transaction'}
+            {isCreatingProduct ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Waiting for Ethereum confirmation...</> : 'Submit Ethereum transaction'}
           </Button>
         </DialogContent>
       </Dialog>
@@ -1418,7 +1418,7 @@ const FarmerDashboard = () => {
                         className="rounded"
                       />
                       <label htmlFor={`product-${product.id}`} className="text-sm">
-                        {product.name} - â‚¹{convertETHToINR(product.price).toLocaleString()}
+                        {product.name} - ₹{convertETHToINR(product.price).toLocaleString()}
                       </label>
                     </div>
                   ))}
