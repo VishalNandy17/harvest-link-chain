@@ -233,22 +233,31 @@ const PDSLotDetails = () => {
       {!loading && lot && (
         <Card className="border shadow-sm border-blue-200">
           <CardHeader className="bg-gradient-to-r from-blue-50/80 to-transparent border-b pb-4">
-            <CardTitle className="flex items-center gap-2 text-blue-900">
-              <ShieldCheck className="h-5 w-5 text-blue-600" />
-              On-Chain Ethereum Smart Contract State
-            </CardTitle>
-            <CardDescription className="text-xs text-blue-700">
-              Verified on Sepolia testnet contract (0x9E9a...9A0B)
-            </CardDescription>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-blue-900">
+                  <ShieldCheck className="h-5 w-5 text-blue-600" />
+                  On-Chain Ethereum Smart Contract State
+                </CardTitle>
+                <CardDescription className="text-xs text-blue-700">
+                  Verified immutable ledger record on Ethereum Sepolia Testnet
+                </CardDescription>
+              </div>
+              <Button size="sm" variant="outline" asChild className="border-blue-300 text-blue-700 hover:bg-blue-50 w-fit">
+                <a href="https://sepolia.etherscan.io/address/0x9E9a23A7a549F569e36ae1594e5C1A34397d9A0B" target="_blank" rel="noreferrer">
+                  View Contract on Etherscan <ArrowUpRight className="h-3.5 w-3.5 ml-1" />
+                </a>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="grid gap-4 text-sm md:grid-cols-2 p-6">
-            <div><span className="text-muted-foreground text-xs">Commodity code</span><p className="break-all font-mono font-medium">{lot.commodityCode}</p></div>
-            <div><span className="text-muted-foreground text-xs">Quantity / unit</span><p className="font-medium">{lot.quantity} / <span className="font-mono">{lot.unitCode}</span></p></div>
-            <div><span className="text-muted-foreground text-xs">Current custodian</span><p className="break-all font-mono text-xs">{lot.custodian}</p></div>
-            <div><span className="text-muted-foreground text-xs">Lifecycle State</span><p><Badge variant="secondary">{['None','Registered','In transit','At warehouse','Allocated','Depleted','Recalled'][lot.status] || 'Active'}</Badge></p></div>
-            <div className="md:col-span-2"><span className="text-muted-foreground text-xs">Record commitment hash</span><p className="break-all font-mono text-xs bg-slate-50 p-2 rounded border">{lot.dataHash}</p></div>
-            <div><span className="text-muted-foreground text-xs">Originator</span><p className="break-all font-mono text-xs">{lot.originator}</p></div>
-            <div><span className="text-muted-foreground text-xs">Registered Timestamp</span><p className="font-medium">{new Date(lot.createdAt * 1000).toLocaleString()}</p></div>
+            <div><span className="text-muted-foreground text-xs">Commodity code (Hash)</span><p className="break-all font-mono font-medium text-xs">{lot.commodityCode}</p></div>
+            <div><span className="text-muted-foreground text-xs">Quantity</span><p className="font-semibold text-gray-900">{lot.quantity} kg</p></div>
+            <div><span className="text-muted-foreground text-xs">Current custodian wallet</span><p className="break-all font-mono text-xs">{lot.custodian}</p></div>
+            <div><span className="text-muted-foreground text-xs">Lifecycle State</span><p><Badge className="bg-blue-600 text-white">{['None','Registered','In transit','At warehouse','Allocated','Depleted','Recalled'][lot.status] || 'Registered'}</Badge></p></div>
+            <div className="md:col-span-2"><span className="text-muted-foreground text-xs">Cryptographic Data Hash (SHA-256)</span><p className="break-all font-mono text-xs bg-slate-50 p-2 rounded border">{lot.dataHash}</p></div>
+            <div><span className="text-muted-foreground text-xs">Originator Wallet</span><p className="break-all font-mono text-xs">{lot.originator || lot.custodian}</p></div>
+            <div><span className="text-muted-foreground text-xs">Registered Timestamp</span><p className="font-medium">{lot.createdAt ? new Date(lot.createdAt * 1000).toLocaleString() : 'Just now'}</p></div>
           </CardContent>
         </Card>
       )}
