@@ -93,6 +93,30 @@ class BlockchainService {
   }
 
   private async getReadProvider(): Promise<ethers.Provider> {
+    // Prefer MetaMask if already connected (avoids cross-origin RPC issues)
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      try {
+        const bp = new ethers.BrowserProvider((window as any).ethereum);
+        const net = await bp.getNetwork().catch(() => null);
+        if (net && net.chainId === BigInt(11155111)) {
+          return bp;
+        }
+      } catch { /* fall through */ }
+    }
+    // Public Sepolia RPCs with no eth_getLogs block range restriction
+    const PUBLIC_RPCS = [
+      'https://ethereum-sepolia-rpc.publicnode.com',
+      'https://rpc.sepolia.org',
+      'https://sepolia.drpc.org',
+    ];
+    for (const url of PUBLIC_RPCS) {
+      try {
+        const p = new ethers.JsonRpcProvider(url);
+        await p.getBlockNumber(); // quick liveness check
+        return p;
+      } catch { /* try next */ }
+    }
+    // Last resort: use configured Alchemy URL (may hit 10-block limit on getLogs)
     if (READ_RPC_URL) return new ethers.JsonRpcProvider(READ_RPC_URL);
     return this.getProvider();
   }

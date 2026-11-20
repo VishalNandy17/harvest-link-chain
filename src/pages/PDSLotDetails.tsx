@@ -63,7 +63,7 @@ const PDSLotDetails = () => {
           console.warn('Supabase query error:', dbErr);
         }
 
-        // 2. Query Ethereum contract safely (non-blocking)
+        // 2. Query Ethereum contract safely (non-blocking, errors are suppressed)
         let lotData: any = null;
         let eventData: any[] = [];
         try {
@@ -72,7 +72,8 @@ const PDSLotDetails = () => {
             getPdsLotEvents(lotId).catch(() => [])
           ]);
         } catch (chainErr) {
-          console.warn('Ethereum query error:', chainErr);
+          // Blockchain is optional — do not propagate RPC errors to UI
+          console.warn('Ethereum query error (non-fatal):', chainErr);
         }
 
         if (!active) return;
@@ -83,10 +84,10 @@ const PDSLotDetails = () => {
         setEvents(eventData || []);
 
         if (!resolvedCrop && !lotData) {
-          setError('No record found for this lot ID in the blockchain or certified cloud registry.');
+          setError('No record found for this lot ID. Please verify the QR code or lot ID is correct.');
         }
       } catch (cause: any) {
-        if (active) setError(cause?.message || 'Could not load verification records for this lot.');
+        if (active) setError('Could not load verification records for this lot. Please try again.');
       } finally {
         if (active) setLoading(false);
       }
