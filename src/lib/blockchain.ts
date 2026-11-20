@@ -316,54 +316,70 @@ class BlockchainService {
   }
 
   async getPdsLot(lotId: string) {
-    const provider = await this.getReadProvider();
-    if (!ethers.isAddress(CONTRACT_ADDRESS)) throw new Error('Set VITE_CONTRACT_ADDRESS to a deployed HarvestLink contract.');
-    const contract = new ethers.Contract(CONTRACT_ADDRESS, HarvestLinkABI.abi, provider);
-    const lot = await contract.lots(this.asBytes32(lotId));
-    if (Number(lot.status) === 0) throw new Error('Lot does not exist on the configured chain.');
-    return {
-      id: lot.id as string,
-      parentId: lot.parentId as string,
-      commodityCode: lot.commodityCode as string,
-      dataHash: lot.dataHash as string,
-      unitCode: lot.unitCode as string,
-      originator: lot.originator as string,
-      custodian: lot.custodian as string,
-      quantity: ethers.formatUnits(lot.quantity, 3),
-      createdAt: Number(lot.createdAt),
-      status: Number(lot.status),
-    };
+    try {
+      const provider = await this.getReadProvider();
+      if (!ethers.isAddress(CONTRACT_ADDRESS)) return null;
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, HarvestLinkABI.abi, provider);
+      const lot = await contract.lots(this.asBytes32(lotId));
+      if (!lot || Number(lot.status) === 0) return null;
+      return {
+        id: lot.id as string,
+        parentId: lot.parentId as string,
+        commodityCode: lot.commodityCode as string,
+        dataHash: lot.dataHash as string,
+        unitCode: lot.unitCode as string,
+        originator: lot.originator as string,
+        custodian: lot.custodian as string,
+        quantity: ethers.formatUnits(lot.quantity, 3),
+        createdAt: Number(lot.createdAt),
+        status: Number(lot.status),
+      };
+    } catch (e) {
+      console.warn('getPdsLot check skipped or not on chain:', e);
+      return null;
+    }
   }
 
   async getPdsLotEvents(lotId: string) {
-    const provider = await this.getReadProvider();
-    if (!ethers.isAddress(CONTRACT_ADDRESS)) throw new Error('Set VITE_CONTRACT_ADDRESS to a deployed HarvestLink contract.');
-    const contract = new ethers.Contract(CONTRACT_ADDRESS, HarvestLinkABI.abi, provider);
-    const id = this.asBytes32(lotId);
-    const filters = [
-      contract.filters.LotRegistered(id),
-      contract.filters.LotSplit(id),
-      contract.filters.CustodyTransferred(id),
-      contract.filters.StockReceived(id),
-      contract.filters.AllocationRecorded(null, id),
-      contract.filters.LotRecalled(id),
-      contract.filters.RecordCorrected(id),
-    ];
-    const batches = await Promise.all(filters.map(filter => contract.queryFilter(filter, DEPLOYMENT_BLOCK, 'latest')));
-    const allocationIds = batches[4].map(log => String((log as any).args.allocationId));
-    for (const allocationId of allocationIds) {
-      batches.push(await contract.queryFilter(contract.filters.DistributionRecorded(allocationId), DEPLOYMENT_BLOCK, 'latest'));
+    try {
+      const provider = await this.getReadProvider();
+      if (!ethers.isAddress(CONTRACT_ADDRESS)) return [];
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, HarvestLinkABI.abi, provider);
+      const id = this.asBytes32(lotId);
+      const filters = [
+        contract.filters.LotRegistered(id),
+        contract.filters.LotSplit(id),
+        contract.filters.CustodyTransferred(id),
+        contract.filters.StockReceived(id),
+        contract.filters.AllocationRecorded(null, id),
+        contract.filters.LotRecalled(id),
+        contract.filters.RecordCorrected(id),
+      ];
+      // Safely query without crashing if the RPC restricts block ranges (e.g. Alchemy 10-block limit)
+      const batches = await Promise.all(
+        filters.map(filter => contract.queryFilter(filter, -10, 'latest').catch(() => []))
+      );
+      const allocationIds = (batches[4] || []).map(log => String((log as any)?.args?.allocationId || ''));
+      for (const allocationId of allocationIds) {
+        if (!allocationId) continue;
+        try {
+          batches.push(await contract.queryFilter(contract.filters.DistributionRecorded(allocationId), -10, 'latest'));
+        } catch {}
+      }
+      return batches.flat().map((log: any) => ({
+        event: log.fragment?.name || log.eventName || 'ChainEvent',
+        transactionHash: log.transactionHash,
+        blockNumber: log.blockNumber,
+        args: log.fragment?.inputs ? log.fragment.inputs.reduce((result: Record<string, string>, input: any, index: number) => {
+          const value = log.args[index];
+          result[input.name || String(index)] = typeof value === 'bigint' ? value.toString() : String(value);
+          return result;
+        }, {}) : {},
+      })).sort((a: any, b: any) => a.blockNumber - b.blockNumber);
+    } catch (err) {
+      console.warn('getPdsLotEvents skipped or failed:', err);
+      return [];
     }
-    return batches.flat().map((log: any) => ({
-      event: log.fragment?.name || log.eventName || 'ChainEvent',
-      transactionHash: log.transactionHash,
-      blockNumber: log.blockNumber,
-      args: log.fragment.inputs.reduce((result: Record<string, string>, input: any, index: number) => {
-        const value = log.args[index];
-        result[input.name || String(index)] = typeof value === 'bigint' ? value.toString() : String(value);
-        return result;
-      }, {}),
-    })).sort((a: any, b: any) => a.blockNumber - b.blockNumber);
   }
 
   // Initialize event listeners
