@@ -381,7 +381,7 @@ The Edge-Aware GAT model achieves superior detection performance across all base
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/nandyvishal17/harvest-link-chain.git
+git clone https://github.com/VishalNandy17/harvest-link-chain.git
 cd harvest-link-chain
 
 # 2. Install production dependencies
