@@ -9,7 +9,7 @@
 
 ## 1. Executive System Architecture
 
-HarvestLink addresses systemic diversion, quantity skimming, phantom dispatching, and record tampering in large-scale food distribution networks. The architecture is explicitly organized into **three distinct architectural tiers** to ensure high throughput, zero leakage of Personally Identifiable Information (PII), and mathematical auditability.
+HarvestLink addresses systemic diversion, quantity skimming, phantom dispatching, and record tampering in large-scale food distribution networks. The architecture is organized into **three distinct tiers** to ensure high throughput, zero PII leakage, and mathematical auditability.
 
 ```mermaid
 flowchart TD
@@ -23,7 +23,7 @@ flowchart TD
         SC --- Events
     end
 
-    subgraph Tier2["Tier 2: Operational Data &amp; Provenance Layer (Cloud &amp; Storage)"]
+    subgraph Tier2["Tier 2: Operational Data and Provenance Layer"]
         SB_Auth["Supabase Auth (JWT + Session)"]
         SB_DB[("PostgreSQL Database<br/>crops, batches, profiles, handovers")]
         QR_Engine["Vector Offline QR Engine (qrcode.react)"]
@@ -33,22 +33,20 @@ flowchart TD
         QR_Engine --- Public_Portal
     end
 
-    subgraph Tier3["Tier 3: Research Governance &amp; Algorithmic Engines (Edge/Client)"]
-        G1["G1: Reconciliation Engine<br/>Eqs (6)-(10)"]
-        G2["G2: Offline Hash Queue<br/>Eqs (11)-(12)"]
-        G3["G3: Handover Evidence<br/>Eq (13)"]
-        GAT["Edge-Aware Graph Attention<br/>Eqs (14)-(27), A1-A8"]
+    subgraph Tier3["Tier 3: Research Governance and Algorithmic Engines"]
+        G1["G1: Reconciliation Engine (Eqs 6-10)"]
+        G2["G2: Offline Hash Queue (Eqs 11-12)"]
+        G3["G3: Handover Evidence (Eq 13)"]
+        GAT["Edge-Aware GAT (Eqs 14-27)"]
     end
 
     Tier2 <== "Cryptographic Hash Commitment (SHA-256 / Keccak-256)" ==> Tier1
-    Tier3 <== "Real-time Verification &amp; Anomaly Scoring" ==> Tier2
+    Tier3 <== "Real-time Verification and Anomaly Scoring" ==> Tier2
 ```
 
 ---
 
 ## 2. Live Operational Infrastructure vs. Research Workflows
-
-To understand the system's operational topology for peer evaluation and reproducibility, the platform distinguishes between **Live Operational Services** (connected end-to-end to live databases and public Ethereum nodes) and **Research Algorithmic Engines** (mathematical and cryptographic models running deterministic calculations).
 
 ```mermaid
 flowchart LR
@@ -61,37 +59,28 @@ flowchart LR
 
     subgraph Research_Engines["Deterministic Algorithmic Research Engines"]
         direction TB
-        R1["G1: Cross-Stage Reconciliation<br/>(Dynamic Tolerance &amp; Lot Residual)"]
-        R2["G2: Offline Hash Chaining<br/>(Tamper-Evident Local Queue)"]
-        R3["G3: Handover Completeness<br/>(Physical-to-Digital Scoring)"]
-        R4["GAT: Relational Graph AI<br/>(Multi-Hop Anomaly Prioritization)"]
+        R1["G1: Cross-Stage Reconciliation"]
+        R2["G2: Offline Hash Chaining"]
+        R3["G3: Handover Completeness"]
+        R4["GAT: Relational Graph AI"]
     end
 
-    Live_Pipeline -. "Supplies Empirical Telemetry &amp; Hashes" .-> Research_Engines
+    Live_Pipeline -. "Supplies Empirical Telemetry and Hashes" .-> Research_Engines
 ```
 
 ### 2.1 Live Operational Services (100% Production Connected)
-1. **Role-Based Access Control (RBAC):**
-   - Implemented via Supabase Auth and strictly enforced server-side.
-   - Protected against privilege escalation using PostgreSQL Row-Level Security (RLS) and the `switch_active_role` RPC security function.
-2. **Farmer Mandi Registration Pipeline:**
-   - Real crops and lot batches are inserted into PostgreSQL with UUID primary keys and referenced against user identity.
+
+1. **Role-Based Access Control (RBAC):** Supabase Auth + PostgreSQL Row-Level Security (RLS) with `switch_active_role` RPC.
+2. **Farmer Mandi Registration Pipeline:** Real crops and lot batches inserted into PostgreSQL with UUID primary keys.
 3. **Decentralized Trust Anchor (Ethereum Sepolia):**
-   - Contract Address: `0x9E9a23A7a549F569e36ae1594e5C1A34397d9A0B`
-   - Real transaction execution: Lots are registered on-chain with immutable SHA-256 payload commitments and assigned custodian addresses.
-   - Example confirmed transaction: [`0x901bfbd06143e1edf82eb8ba8d74deefd6dba19b66216aa7e3e24cffbbb531a9`](https://sepolia.etherscan.io/tx/0x901bfbd06143e1edf82eb8ba8d74deefd6dba19b66216aa7e3e24cffbbb531a9) mined in Block `12174749`.
-4. **Vector Offline QR Code System:**
-   - Independent client-side vector generation utilizing `qrcode.react` (`QRCodeSVG` + high-res `QRCodeCanvas`).
-   - Generates direct URL payloads pointing to `/lot/<uuid>` without reliance on third-party image generation APIs.
-5. **Universal Public Trace Portal (`/lot/:lotId`):**
-   - Configured with Netlify Single-Page Application (SPA) redirect rules (`/* -> /index.html 200`).
-   - Combines off-chain database attributes with on-chain Etherscan verification.
+   - Contract: `0x9E9a23A7a549F569e36ae1594e5C1A34397d9A0B`
+   - Confirmed tx: [`0x901bfbd0...531a9`](https://sepolia.etherscan.io/tx/0x901bfbd06143e1edf82eb8ba8d74deefd6dba19b66216aa7e3e24cffbbb531a9) — Block `12174749`
+4. **Vector Offline QR Code System:** `qrcode.react` (`QRCodeSVG` + `QRCodeCanvas`), no third-party API.
+5. **Universal Public Trace Portal (`/lot/:lotId`):** Netlify SPA redirects + hybrid Supabase + Etherscan verification.
 
 ---
 
 ## 3. Research Workflows &amp; Mathematical Formalization
-
-The research workflows implement the exact equations set forth in **IEEE Manuscript T4-2026-044**. These modules execute deterministic mathematical and cryptographic operations client-side.
 
 ```mermaid
 graph TD
@@ -100,12 +89,9 @@ graph TD
         E7 --> E8["Eq 8: Dynamic Tolerance and Relative Discrepancy"]
         E8 --> E9["Eq 9: Exception Decision Rule"]
         E9 --> E10["Eq 10: Global Lot Conservation Residual"]
-
         E11["Eq 11: Offline Hash-Chain"] --> E12["Eq 12: Cryptographic Integrity Predicate"]
-
         E13["Eq 13: Handover Evidence Completeness"]
-
-        E14["Eq 14-15: Graph Construction and Edge Features"] --> E17["Eq 17-21: Multi-Head Attention"]
+        E14["Eq 14-15: Graph Construction"] --> E17["Eq 17-21: Multi-Head Attention"]
         E17 --> E22["Eq 22-23: Anomaly Probability"]
         E22 --> E27["Eq 27: Hybrid Decision Rule"]
     end
@@ -115,34 +101,29 @@ graph TD
 
 Modeled in `src/lib/reconciliation.ts` after Section V-A.
 
-For each facility $v$ during settlement period $t$, the **Expected Closing Stock** $S^{\mathrm{exp}}_{v,t}$ is formalized as:
+For each facility $v$ during settlement period $t$, the **Expected Closing Stock** is:
 
-$$S^{\mathrm{exp}}_{v,t} = S^{\mathrm{obs}}_{v,t-1} + I_{v,t} - O_{v,t} - B_{v,t} - L_{v,t} \tag{Eq. 6}$$
+$$S^{\text{exp}}_{v,t} = S^{\text{obs}}_{v,t-1} + I_{v,t} - O_{v,t} - B_{v,t} - L_{v,t} \qquad \textbf{(Eq. 6)}$$
 
-Where:
-- $S^{\mathrm{obs}}_{v,t-1}$: Verified opening physical stock from period $t-1$.
-- $I_{v,t}$: Cumulative accepted inbound shipments.
-- $O_{v,t}$: Cumulative authorized outbound dispatches.
-- $B_{v,t}$: Quantity distributed to authenticated beneficiaries (for Fair Price Shops).
-- $L_{v,t}$: Statutorily permitted transit/handling loss (spillage, moisture loss).
+Where $S^{\text{obs}}_{v,t-1}$ is the verified opening stock, $I_{v,t}$ is accepted inbound shipments, $O_{v,t}$ is authorized outbound dispatches, $B_{v,t}$ is beneficiary distributions, and $L_{v,t}$ is permitted transit loss.
 
-The **Observed Discrepancy** $\Delta_{v,t}$ is:
+The **Observed Discrepancy** is:
 
-$$\Delta_{v,t} = S^{\mathrm{exp}}_{v,t} - S^{\mathrm{obs}}_{v,t} \tag{Eq. 7}$$
+$$\Delta_{v,t} = S^{\text{exp}}_{v,t} - S^{\text{obs}}_{v,t} \qquad \textbf{(Eq. 7)}$$
 
-To prevent false alarms arising from minor measurement jitter while detecting systematic diversion, the system computes a **Dynamic Tolerance** $\tau_{v,t}$ and **Relative Discrepancy** $z_{v,t}$:
+The **Dynamic Tolerance** $\tau_{v,t}$ and **Relative Discrepancy** $z_{v,t}$ prevent false alarms from measurement jitter:
 
-$$\tau_{v,t} = \max\!\left(\tau_{\mathrm{abs}},\; \rho \cdot S^{\mathrm{exp}}_{v,t}\right), \qquad z_{v,t} = \frac{|\Delta_{v,t}|}{\max\!\left(S^{\mathrm{exp}}_{v,t},\; \varepsilon\right)} \tag{Eq. 8}$$
+$$\tau_{v,t} = \max(\tau_{\text{abs}},\; \rho \cdot S^{\text{exp}}_{v,t}), \qquad z_{v,t} = \frac{|\Delta_{v,t}|}{\max(S^{\text{exp}}_{v,t},\; \epsilon)} \qquad \textbf{(Eq. 8)}$$
 
-Where $\tau_{\mathrm{abs}} = 10.0\,\text{kg}$, $\rho = 0.005$ (0.5% scale tolerance), and $\varepsilon = 10^{-4}$.
+Where $\tau_{\text{abs}} = 10.0\,\text{kg}$, $\rho = 0.005$ (0.5% scale tolerance), and $\epsilon = 10^{-4}$.
 
-The **Deterministic Exception Decision Rule** $a^{\mathrm{rule}}_{v,t}$ is defined as:
+The **Deterministic Exception Decision Rule** is:
 
-$$a^{\mathrm{rule}}_{v,t} = \mathbf{1}\!\left[\, |\Delta_{v,t}| > \tau_{v,t} \,\right] \tag{Eq. 9}$$
+$$a^{\text{rule}}_{v,t} = \mathbf{1}\left[ |\Delta_{v,t}| > \tau_{v,t} \right] \qquad \textbf{(Eq. 9)}$$
 
-At the global lot level across all facilities $\mathcal{V}$, the **Lot Conservation Residual** $r_{l,t}$ prevents cross-facility leakage:
+The **Lot Conservation Residual** $r_{l,t}$ across all facilities $\mathcal{V}$ prevents cross-facility leakage:
 
-$$r_{l,t} = Q_l - \left( \sum_{v \in \mathcal{V}} S^{\mathrm{obs},(l)}_{v,t} + \sum_{e \in \mathcal{T}_t} q^{\mathrm{disp}}_e + B^{(l)}_{\le t} + L^{(l)}_{\le t} \right) \tag{Eq. 10}$$
+$$r_{l,t} = Q_l - \left( \sum_{v \in \mathcal{V}} S^{\text{obs},(l)}_{v,t} + \sum_{e \in \mathcal{T}_t} q^{\text{disp}}_e + B^{(l)}_{\le t} + L^{(l)}_{\le t} \right) \qquad \textbf{(Eq. 10)}$$
 
 ---
 
@@ -150,38 +131,31 @@ $$r_{l,t} = Q_l - \left( \sum_{v \in \mathcal{V}} S^{\mathrm{obs},(l)}_{v,t} + \
 
 Modeled in `src/lib/offlineQueue.ts` after Section V-B.
 
-When network connectivity is unavailable at rural mandis or Fair Price Shops, local events are chained using an append-only, tamper-evident hash structure:
+When network connectivity is unavailable, local events are chained in a tamper-evident append-only structure:
 
-$$\pi_e = H\!\left(\mathrm{event\_id} \;\|\; n_e \;\|\; \pi_{\mathrm{pred}(e)} \;\|\; H(\mathrm{payload}_e)\right) \tag{Eq. 11}$$
+$$\pi_e = H\!\left(\text{event\_id} \parallel n_e \parallel \pi_{\text{pred}(e)} \parallel H(\text{payload}_e)\right) \qquad \textbf{(Eq. 11)}$$
 
-Where:
-- $n_e$: Monotonically increasing local device sequence number.
-- $\pi_{\mathrm{pred}(e)}$: Cryptographic hash of the immediately preceding event ($\pi_0 = \texttt{"GENESIS"}$).
-- $H$: Keccak-256 / SHA-256 collision-resistant hash function.
+Where $n_e$ is the monotonically increasing device sequence number, $\pi_{\text{pred}(e)}$ is the hash of the preceding event ($\pi_0 = \text{"GENESIS"}$), and $H$ is Keccak-256 / SHA-256.
 
-Upon reconnection, the node validates the **Cryptographic Integrity Predicate** $V(e)$:
+Upon reconnection, the **Cryptographic Integrity Predicate** $V(e)$ is validated:
 
-$$V(e) = A(e) \land S(e) \land P(e) \land U(e) \tag{Eq. 12}$$
+$$V(e) = A(e) \land S(e) \land P(e) \land U(e) \qquad \textbf{(Eq. 12)}$$
 
-Where:
-- $A(e)$: Actor authority verification against registered wallet roles.
-- $S(e)$: Cryptographic signature verification over $\pi_e$ via EIP-191.
-- $P(e)$: Predecessor hash continuity check $\bigl(\pi_{\mathrm{pred}(e)} = \pi_{e-1}\bigr)$.
-- $U(e)$: Idempotency check ensuring $\mathrm{event\_id}$ has not been previously committed.
+Where $A(e)$ = actor authority check, $S(e)$ = EIP-191 signature verification over $\pi_e$, $P(e)$ = predecessor hash continuity ($\pi_{\text{pred}(e)} = \pi_{e-1}$), and $U(e)$ = idempotency (no duplicate `event_id`).
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant Device as Offline Edge Device (FPS/Mandi)
-    participant LocalCache as LocalStorage Hash-Chain
+    participant Cache as LocalStorage Hash-Chain
     participant Relayer as Sync Relayer / API
     participant Ledger as Sepolia Smart Contract
 
     Device->>Device: Generate event_id, read payload_e
-    Device->>LocalCache: Compute H(payload_e)
-    Device->>LocalCache: Compute pi_e = H(event_id || n_e || pi_pred || H(payload))
-    Device->>LocalCache: Sign pi_e with EIP-191 Private Key
-    LocalCache-->>Device: Queue Status: PENDING
+    Device->>Cache: Compute H(payload_e)
+    Device->>Cache: Compute pi_e = H(event_id || n_e || pi_pred || H(payload))
+    Device->>Cache: Sign pi_e with EIP-191 Private Key
+    Cache-->>Device: Queue Status: PENDING
 
     Note over Device,Relayer: Network Reconnection Established
     Device->>Relayer: Submit Hash Chain [e_1, e_2, ..., e_k]
@@ -201,25 +175,28 @@ sequenceDiagram
 
 Modeled in `src/lib/evidence.ts` after Section V-C.
 
-Physical-to-digital handovers between carriers, depots, and fair price shops are scored using the **Evidence Completeness Metric** $C_e \in [0,\, 1]$:
+Physical-to-digital handovers are scored by the **Evidence Completeness Metric** $C_e \in [0,\, 1]$:
 
-$$C_e = \frac{1}{m} \sum_{k=1}^{m} \mathbf{1}\!\left[\, f_k \text{ is present and valid} \,\right] \tag{Eq. 13}$$
+$$C_e = \frac{1}{m} \sum_{k=1}^{m} \mathbf{1}\left[ f_k \text{ is present and valid} \right] \qquad \textbf{(Eq. 13)}$$
 
-The 12 verification dimensions evaluated:
-1. `shipmentId`: Unique verifiable consignment code.
-2. `lotId`: Referenced parent/child commodity lot identifier.
-3. `senderAddress`: Validated sender wallet address.
-4. `receiverAddress`: Validated receiver wallet address.
-5. `vehicleCarrierRef`: Commercial carrier registration or GPS fleet tracking tag.
-6. `sealId`: Tamper-evident mechanical/RFID bolt seal identifier.
-7. `dispatchQty`: Verified weighment at dispatch point.
-8. `receiptQty`: Independent weighment recorded at receiving point.
-9. `weighmentSlipRef`: Calibrated weighbridge digital ticket hash.
-10. `inspectionPassed`: Independent quality inspection certification.
-11. `moisturePercentage`: Grain moisture content (ideal range: $10.0\% \le M \le 14.0\%$).
-12. `receiverSignature`: EIP-191 receiver acceptance cryptographic signature.
+The 12 verification dimensions evaluated ($m = 12$):
 
-A transfer is flagged as non-compliant if $C_e < 0.85$.
+| # | Field | Description |
+|:-:|:---|:---|
+| 1 | `shipmentId` | Unique verifiable consignment code |
+| 2 | `lotId` | Referenced parent/child commodity lot identifier |
+| 3 | `senderAddress` | Validated sender wallet address |
+| 4 | `receiverAddress` | Validated receiver wallet address |
+| 5 | `vehicleCarrierRef` | Carrier registration or GPS fleet tracking tag |
+| 6 | `sealId` | Tamper-evident mechanical/RFID bolt seal identifier |
+| 7 | `dispatchQty` | Verified weighment at dispatch point |
+| 8 | `receiptQty` | Independent weighment at receiving point |
+| 9 | `weighmentSlipRef` | Calibrated weighbridge digital ticket hash |
+| 10 | `inspectionPassed` | Independent quality inspection certification |
+| 11 | `moisturePercentage` | Grain moisture content (ideal: $10\% \le M \le 14\%$) |
+| 12 | `receiverSignature` | EIP-191 receiver acceptance cryptographic signature |
+
+A transfer is flagged non-compliant if $C_e < 0.85$.
 
 ---
 
@@ -229,50 +206,48 @@ Modeled in `src/lib/gatAnomalyEngine.ts` after Section VI.
 
 The supply chain is modeled as a temporal directed multigraph:
 
-$$\mathcal{G}_t = \left(\mathcal{V},\; \mathcal{E}_t,\; \mathbf{X}_t,\; \mathbf{Z}_t\right) \tag{Eq. 14}$$
+$$\mathcal{G}_t = (\mathcal{V},\; \mathcal{E}_t,\; \mathbf{X}_t,\; \mathbf{Z}_t) \qquad \textbf{(Eq. 14)}$$
 
 #### Edge Feature Representation
 
-For each transfer edge $e = (i, j) \in \mathcal{E}_t$, the feature vector $\mathbf{z}_{ij}$ is constructed as:
+For each transfer edge $e = (i, j) \in \mathcal{E}_t$, the feature vector $\mathbf{z}_{ij}$ is:
 
-$$\mathbf{z}_{ij} = \left[\, d_{ij},\; r_{ij},\; l_{ij},\; C_e \,\right]^{\!\top} \tag{Eq. 15}$$
+$$\mathbf{z}_{ij} = \left[ d_{ij},\; r_{ij},\; l_{ij},\; C_e \right]^{\top} \qquad \textbf{(Eq. 15)}$$
 
 Where:
-- $d_{ij} = q^{\mathrm{disp}}_{ij} - q^{\mathrm{rec}}_{ij}$: Absolute transit quantity gap.
-- $r_{ij} = \dfrac{d_{ij}}{\max\!\left(q^{\mathrm{disp}}_{ij},\; \varepsilon\right)}$: Relative transit loss ratio.
-- $l_{ij}$: Transit duration in hours.
-- $C_e$: Evidence completeness score from Eq. (13).
+- $d_{ij} = q^{\text{disp}}_{ij} - q^{\text{rec}}_{ij}$ — Absolute transit quantity gap
+- $r_{ij} = d_{ij} / \max(q^{\text{disp}}_{ij},\; \epsilon)$ — Relative transit loss ratio
+- $l_{ij}$ — Transit duration in hours
+- $C_e$ — Evidence completeness score from Eq. 13
 
 #### Edge-Aware Attention Mechanism
 
-For node $i$ with neighborhood $\mathcal{N}_i$, the attention coefficient $\alpha_{ij}^{k}$ under attention head $k$ is:
+For node $i$ with neighborhood $\mathcal{N}_i$, the attention coefficient $\alpha_{ij}^{k}$ under head $k$ is:
 
-$$\alpha_{ij}^{k} = \frac{\exp\!\left(\mathrm{LeakyReLU}\!\left(\mathbf{a}_k^{\top}\!\left[\mathbf{W}_k\mathbf{x}_i \;\|\; \mathbf{W}_k\mathbf{x}_j \;\|\; \mathbf{W}_e^k\mathbf{z}_{ij}\right]\right)\right)}{\displaystyle\sum_{u \in \mathcal{N}_i} \exp\!\left(\mathrm{LeakyReLU}\!\left(\mathbf{a}_k^{\top}\!\left[\mathbf{W}_k\mathbf{x}_i \;\|\; \mathbf{W}_k\mathbf{x}_u \;\|\; \mathbf{W}_e^k\mathbf{z}_{iu}\right]\right)\right)} \tag{Eq. 17}$$
+$$\alpha_{ij}^{k} = \frac{\exp\left(\text{LeakyReLU}\!\left(\mathbf{a}_k^{\top}\left[\mathbf{W}_k\mathbf{x}_i \parallel \mathbf{W}_k\mathbf{x}_j \parallel \mathbf{W}_e^k\mathbf{z}_{ij}\right]\right)\right)}{\sum_{u \in \mathcal{N}_i} \exp\left(\text{LeakyReLU}\!\left(\mathbf{a}_k^{\top}\left[\mathbf{W}_k\mathbf{x}_i \parallel \mathbf{W}_k\mathbf{x}_u \parallel \mathbf{W}_e^k\mathbf{z}_{iu}\right]\right)\right)} \qquad \textbf{(Eq. 17)}$$
 
-The transfer-level anomaly probability $p_{ij}$ is produced by aggregating concatenated multi-head representations:
+The transfer-level anomaly probability $p_{ij}$ aggregates multi-head representations:
 
-$$p_{ij} = \sigma\!\left(\mathbf{w}_c^{\top}\!\left[\mathbf{h}_i \;\|\; \mathbf{h}_j \;\|\; \mathbf{z}_{ij}\right] + b_c\right) \tag{Eq. 23}$$
+$$p_{ij} = \sigma\!\left(\mathbf{w}_c^{\top}\left[\mathbf{h}_i \parallel \mathbf{h}_j \parallel \mathbf{z}_{ij}\right] + b_c\right) \qquad \textbf{(Eq. 23)}$$
 
 #### The 8 Empirical Attack Families ($A_1$ to $A_8$)
 
-The engine evaluates robustness against the attack taxonomy defined in Section VI-F:
-
 | ID | Attack Family | Description |
 |:--:|:---|:---|
-| $A_1$ | **Phantom Dispatch** | Consignment created on ledger without physical grain allocation. |
-| $A_2$ | **En-Route Hijacking** | Physical carrier diverted; delivery unfulfilled. |
-| $A_3$ | **Quantity Skimming** | Systemic extraction of 2–5% grain during transit. |
-| $A_4$ | **Moisture Adulteration** | Dry grain replaced with high-moisture product to mask weight deficit. |
-| $A_5$ | **Seal Compromise** | Unbroken seal records accompanied by physical seal discrepancies. |
-| $A_6$ | **Recycled Delivery Slips** | Replaying historical weighbridge certificates for new shipments. |
-| $A_7$ | **Sub-Tolerance Skimming** | Distributed skimming below threshold $\tau_{v,t}$ across many facilities. |
-| $A_8$ | **Collusive Laundering** | Paired entities falsifying transfer volumes to cover deficits. |
+| $A_1$ | **Phantom Dispatch** | Consignment created on ledger without physical grain allocation |
+| $A_2$ | **En-Route Hijacking** | Physical carrier diverted; delivery unfulfilled |
+| $A_3$ | **Quantity Skimming** | Systemic extraction of 2–5% grain during transit |
+| $A_4$ | **Moisture Adulteration** | Dry grain replaced with high-moisture product to mask weight deficit |
+| $A_5$ | **Seal Compromise** | Unbroken seal records with physical seal discrepancies |
+| $A_6$ | **Recycled Delivery Slips** | Replaying historical weighbridge certificates for new shipments |
+| $A_7$ | **Sub-Tolerance Skimming** | Distributed skimming below $\tau_{v,t}$ across many facilities |
+| $A_8$ | **Collusive Laundering** | Paired entities falsifying transfer volumes to cover deficits |
 
 #### Hybrid Decision Rule $\mathcal{D}(e)$
 
-$$\mathcal{D}(e) = \begin{cases} \texttt{REJECT} & \text{if } C(e) = 0 \;\lor\; a^{\mathrm{rule}}_e = 1 \\[4pt] \texttt{REVIEW} & \text{if } C(e) = 1 \;\land\; a^{\mathrm{rule}}_e = 0 \;\land\; p_{ij} \ge \theta^* \\[4pt] \texttt{ACCEPT} & \text{if } C(e) = 1 \;\land\; a^{\mathrm{rule}}_e = 0 \;\land\; p_{ij} < \theta^* \end{cases} \tag{Eq. 27}$$
+$$\mathcal{D}(e) = \begin{cases} \text{REJECT} & \text{if } C(e) = 0 \text{ or } a^{\text{rule}}_e = 1 \\ \text{REVIEW} & \text{if } C(e) = 1 \text{ and } a^{\text{rule}}_e = 0 \text{ and } p_{ij} \ge \theta^* \\ \text{ACCEPT} & \text{if } C(e) = 1 \text{ and } a^{\text{rule}}_e = 0 \text{ and } p_{ij} < \theta^* \end{cases} \qquad \textbf{(Eq. 27)}$$
 
-Where $C(e) \in \{0, 1\}$ denotes smart contract constraint validity and $\theta^* = 0.55$ is the optimal decision threshold.
+Where $C(e) \in \{0, 1\}$ is smart contract constraint validity and $\theta^* = 0.55$ is the optimal decision threshold.
 
 ---
 
@@ -292,18 +267,18 @@ Output: Database UUID cropId, Batch Number batchNum, Transaction Hash txHash, Ve
  5: // Step 1: Off-chain transactional persistence
  6: cropRecord <- INSERT INTO crops (farmer_id, name, quantity, price_per_unit, location, status)
  7:               VALUES (farmerProfileId, D.name, D.quantity, D.price, D.location, 'registered')
- 8: cropId   <- cropRecord.id
- 9: batchNum <- "PDS-LOT-" + Substring(CurrentTimestamp(), -6)
+ 8: cropId    <- cropRecord.id
+ 9: batchNum  <- "PDS-LOT-" + Substring(CurrentTimestamp(), -6)
 10: qrPayload <- BaseUrl + "/lot/" + cropId
 11: INSERT INTO batches (crop_id, batch_number, qr_code, quantity, status)
 12:             VALUES (cropId, batchNum, qrPayload, D.quantity, 'available')
 
-13: // Step 2: On-chain cryptographic commitment (if wallet connected)
+13: // Step 2: On-chain cryptographic commitment (requires MetaMask on Sepolia)
 14: IF wallet.isConnected == TRUE THEN
-15:     payloadHash    <- SHA256(JSON.canonicalize(D))
-16:     lotIdBytes32   <- Keccak256(cropId)
+15:     payloadHash      <- SHA256(JSON.canonicalize(D))
+16:     lotIdBytes32     <- Keccak256(cropId)
 17:     commodityBytes32 <- Keccak256(D.name)
-18:     quantityUnits  <- ParseUnits(D.quantity, 3)
+18:     quantityUnits    <- ParseUnits(D.quantity, 3)
 19:     txReceipt <- Contract.registerLot(lotIdBytes32, commodityBytes32,
 20:                                       quantityUnits, Keccak256("kg"),
 21:                                       wallet.address, payloadHash)
@@ -314,8 +289,6 @@ Output: Database UUID cropId, Batch Number batchNum, Transaction Hash txHash, Ve
 25: qrVector <- RenderQRCodeSVG(qrPayload, level='H', margin=true)
 26: RETURN {cropId, batchNum, txHash, qrVector}
 ```
-
----
 
 ### Algorithm 2: Offline Hash-Chaining &amp; Integrity Audit
 
@@ -344,7 +317,7 @@ Output: Validation Decision {VALID, QUARANTINED}, Failure Log F
 16:         Append F, "Payload hash corruption at event: " + e.eventId
 17:     END IF
 
-18:     // Hash chain recomputation  [Eq. 11]
+18:     // Hash chain recomputation [Eq. 11]
 19:     computedPi <- Keccak256(SolidityPacked(e.eventId, e.sequenceNumber,
 20:                                            e.predHash, e.payloadHash))
 21:     IF computedPi != e.chainPi THEN
@@ -381,12 +354,10 @@ Output: Validation Decision {VALID, QUARANTINED}, Failure Log F
 | **Smart Contract** | [`0x9E9a23A7a549F569e36ae1594e5C1A34397d9A0B`](https://sepolia.etherscan.io/address/0x9E9a23A7a549F569e36ae1594e5C1A34397d9A0B) |
 | **Deployment Block** | `12173724` |
 | **Compiler** | Solidity `0.8.20`, OpenZeppelin `v5.0` |
-| **Reference Seeded Lot** | `e7b2170e-7060-45f2-bd18-60f3d99c06f6` (Batch `PDS-LOT-494182`, Organic Wheat, 90 kg, Naihati Mandi) |
-| **On-chain Tx** | [`0x901b...531a9`](https://sepolia.etherscan.io/tx/0x901bfbd06143e1edf82eb8ba8d74deefd6dba19b66216aa7e3e24cffbbb531a9) — Block `12174749` |
+| **Reference Seeded Lot** | `e7b2170e-7060-45f2-bd18-60f3d99c06f6` — Organic Wheat, 90 kg, Naihati Mandi |
+| **On-chain Tx** | [`0x901bfbd0...531a9`](https://sepolia.etherscan.io/tx/0x901bfbd06143e1edf82eb8ba8d74deefd6dba19b66216aa7e3e24cffbbb531a9) — Block `12174749` |
 
 ### 5.2 Benchmark Model Performance (Section IX)
-
-The Edge-Aware GAT model achieves superior detection performance across all baselines on synthetic multi-hop topologies:
 
 | Model Architecture | Precision | Recall | F1-Score | PR-AUC | FAR |
 | :--- | :---: | :---: | :---: | :---: | :---: |
@@ -425,7 +396,7 @@ npm run build
 ## 7. License &amp; Citation
 
 This implementation is released under the **MIT License**.  
-When using or referencing this codebase or architecture in academic publications, please cite:
+When referencing this codebase in academic publications, please cite:
 
 ```bibtex
 @article{harvestlink2026,
