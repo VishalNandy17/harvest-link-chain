@@ -51,7 +51,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const savedActiveRole = (typeof window !== 'undefined' ? localStorage.getItem('hl_active_role') : null) as UserRole | null
+  const [userRole, setUserRole] = useState<UserRole | null>(savedActiveRole)
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(false)
 
@@ -90,18 +91,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(session?.user ?? null)
     
     if (session?.user) {
-      setUserRole(null)
-      // Fetch full profile in background and refine role
+      // Retain or determine role without resetting to null
+      const metaRole = (session.user.user_metadata?.role as UserRole) || 
+                       (session.user.user_metadata?.requestedRole as UserRole)
+      const currentSavedRole = (typeof window !== 'undefined' ? localStorage.getItem('hl_active_role') : null) as UserRole | null
+      const resolvedRole = currentSavedRole || metaRole || UserRole.FARMER
+      
+      setUserRole(prev => prev || resolvedRole)
+
+      // Fetch full profile in background
       fetchProfile(session.user.id)
         .then((userProfile) => {
-          setProfile(userProfile)
-          if (userProfile?.role) setUserRole(userProfile.role)
+          if (userProfile) {
+            setProfile(userProfile)
+            const activeRole = (typeof window !== 'undefined' ? localStorage.getItem('hl_active_role') : null) as UserRole | null
+            if (!activeRole && userProfile.role) {
+              setUserRole(userProfile.role as UserRole)
+              localStorage.setItem('hl_active_role', userProfile.role)
+            }
+          }
         })
         .catch((err) => console.error('Profile fetch error:', err))
     } else {
       // User is not authenticated, clear profile
       setProfile(null)
       setUserRole(null)
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('hl_active_role')
+      }
     }
     
     // Mark initial load completed immediately after session processed
@@ -185,13 +202,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const switchRole = async (newRole: UserRole) => {
     try {
-      if (!user) throw new Error('User not authenticated')
-      const { error } = await supabase.rpc('switch_active_role', { new_role: newRole })
-      if (error) throw error
-      
-      const updatedProfile = await fetchProfile(user.id)
-      setProfile(updatedProfile)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('hl_active_role', newRole)
+      }
       setUserRole(newRole)
+      if (user) {
+        await supabase.rpc('switch_active_role', { new_role: newRole }).catch(() => {})
+        const updatedProfile = await fetchProfile(user.id).catch(() => null)
+        if (updatedProfile) setProfile(updatedProfile)
+      }
       return { error: null }
     } catch (error) {
       console.error('Error switching role:', error)

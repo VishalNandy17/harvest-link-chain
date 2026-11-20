@@ -46,6 +46,7 @@ const FarmerDashboard = () => {
   const [offchainBatches, setOffchainBatches] = useState<Array<{ id: string; qr: string; createdAt: string; location: string; productCount: number }>>([]);
   const [offchainProduce, setOffchainProduce] = useState<Array<{ id: string; crop: string; quantity: string; date: string; price: string; status: string; qr: string }>>([]);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('listings');
   const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
   const [isCreatingBatch, setIsCreatingBatch] = useState(false);
@@ -94,44 +95,66 @@ const FarmerDashboard = () => {
   const loadSupabaseFarmData = async () => {
     setIsLoading(true);
     try {
-      const { data: batchesData, error } = await supabase
+      // 1. Fetch crops directly
+      const { data: cropsData, error: cropErr } = await supabase
+        .from('crops')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (cropErr) {
+        console.error('Error fetching crops:', cropErr);
+      }
+
+      // 2. Fetch batches directly
+      const { data: batchesData, error: batchErr } = await supabase
         .from('batches')
         .select(`
-          id, batch_number, qr_code, unit, status, created_at,
+          id, crop_id, batch_number, qr_code, quantity, unit, price_per_unit, status, created_at,
           crops (
-            id, name, region, description, certifications
+            id, name, location, description, certifications
           )
         `)
         .order('created_at', { ascending: false });
 
-      if (batchesData && batchesData.length > 0) {
-        const mappedProduce = batchesData.map((b: any) => {
-          const crop = Array.isArray(b.crops) ? b.crops[0] : b.crops;
+      if (batchErr) {
+        console.error('Error fetching batches:', batchErr);
+      }
+
+      if (cropsData && cropsData.length > 0) {
+        const mappedProduce = cropsData.map((c: any) => {
+          const matchingBatch = batchesData?.find((b: any) => b.crop_id === c.id);
+          const qrUrl = matchingBatch?.qr_code || `${window.location.origin}/lot/${c.id}`;
           return {
-            id: b.id,
-            crop: crop?.name || 'Produce Lot',
-            quantity: `500 ${b.unit || 'kg'}`,
-            date: b.created_at ? new Date(b.created_at).toLocaleDateString() : 'Today',
-            status: b.status || 'Active',
-            price: '₹2,675/qtl (MSP)',
-            qr: b.qr_code,
+            id: c.id,
+            crop: c.name,
+            quantity: `${c.quantity} ${c.unit || 'kg'}`,
+            date: c.created_at ? new Date(c.created_at).toLocaleDateString() : 'Today',
+            status: c.status === 'registered' ? 'Listed' : c.status === 'sold' ? 'Sold' : 'Active',
+            price: `₹${c.price_per_unit}/kg`,
+            qr: qrUrl,
             verified: true,
-            blockchainId: b.batch_number
+            blockchainId: matchingBatch?.batch_number || `LOT-${c.id.slice(0, 6)}`
           };
         });
         setOffchainProduce(mappedProduce);
+      } else {
+        setOffchainProduce([]);
+      }
 
+      if (batchesData && batchesData.length > 0) {
         const mappedBatches = batchesData.map((b: any) => {
           const crop = Array.isArray(b.crops) ? b.crops[0] : b.crops;
           return {
             id: b.batch_number || b.id,
             qr: b.qr_code,
             createdAt: b.created_at,
-            location: crop?.region || 'Registered Mandi Hub',
+            location: crop?.location || 'Registered Mandi Hub',
             productCount: 1
           };
         });
         setOffchainBatches(mappedBatches);
+      } else {
+        setOffchainBatches([]);
       }
     } catch (err) {
       console.error('Error loading Supabase farm data:', err);
@@ -328,29 +351,45 @@ const FarmerDashboard = () => {
       const cropName = newProduct.name;
       const cropDesc = newProduct.description || `${cropName} registered under National PDS scheme`;
       const cropRegion = newProduct.region || [batchDetails.locationDistrict, batchDetails.locationState].filter(Boolean).join(', ') || 'Central Mandi Hub';
-      const certs = batchDetails.certificationInfo ? batchDetails.certificationInfo.split(',').map(s => s.trim()) : ['FSSAI-Fortified'];
+      const certs = batchDetails.certificationInfo ? batchDetails.certificationInfo.split(',').map(s => s.trim()) : ['FSSAI-Certified'];
+
+      // Ensure farmer profile ID exists
+      let farmerProfileId = profile?.id;
+      if (!farmerProfileId && user?.id) {
+        const { data: p } = await supabase.from('profiles').select('id').eq('user_id', user.id).maybeSingle();
+        farmerProfileId = p?.id;
+      }
+
+      if (!farmerProfileId) {
+        throw new Error('Farmer profile not resolved. Please sign in again.');
+      }
+
+      const qty = parseFloat(newProduct.quantityKg) || 1000;
+      const priceUnit = parseFloat(newProduct.price) || 26.75;
 
       // 1. Insert into Supabase crops
       const { data: insertedCrop, error: cropErr } = await supabase
         .from('crops')
         .insert({
-          farmer_id: profile?.id,
+          farmer_id: farmerProfileId,
           name: cropName,
-          description: cropDesc,
+          quantity: qty,
           unit: 'kg',
+          price_per_unit: priceUnit,
+          description: cropDesc,
           location: cropRegion,
-          region: cropRegion,
           certifications: certs,
-          status: 'active'
+          status: 'registered'
         })
         .select()
         .single();
 
       if (cropErr) {
-        console.warn('Crop insert notice:', cropErr.message);
+        console.error('Crop insert error:', cropErr);
+        throw new Error(cropErr.message);
       }
 
-      const cropId = insertedCrop?.id || `crop-${Date.now()}`;
+      const cropId = insertedCrop.id;
       const batchNum = `PDS-LOT-${Date.now().toString().slice(-6)}`;
       const qrPayload = `${window.location.origin}/lot/${cropId}`;
 
@@ -358,12 +397,13 @@ const FarmerDashboard = () => {
       const { data: insertedBatch, error: batchErr } = await supabase
         .from('batches')
         .insert({
-          crop_id: insertedCrop?.id,
+          crop_id: cropId,
           batch_number: batchNum,
           qr_code: qrPayload,
+          quantity: qty,
           unit: 'kg',
-          custodian: profile ? `${profile.first_name} ${profile.last_name}`.trim() : 'Registered Farmer',
-          status: 'active'
+          price_per_unit: priceUnit,
+          status: 'available'
         })
         .select()
         .single();
@@ -372,26 +412,23 @@ const FarmerDashboard = () => {
         console.warn('Batch insert notice:', batchErr.message);
       }
 
-      // 3. Generate QR Code image
+      // 3. Open QR modal directly with real QR data
       setQrType('batch');
       setCurrentQRData(qrPayload);
-      try {
-        const img = await generateQRCodeDataURL(qrPayload);
-        setCurrentQRCode(img);
-      } catch (_) {}
       setIsQRDialogOpen(true);
 
       toast({
         title: 'Crop Lot & QR Code Generated!',
-        description: `Batch #${batchNum} is now active and ready for dispatch.`,
+        description: `Batch #${batchNum} (${cropName}) registered and ready for dispatch.`,
       });
 
       // 4. Reload farm data from Supabase
       await loadSupabaseFarmData();
 
-      // Reset form
+      // Reset form and switch tab back to listings
       setNewProduct({ name: '', description: '', imageHash: '', price: '', quantityKg: '', mspPerKg: '', farmerWallet: '', region: '' });
       setIsProductDialogOpen(false);
+      setActiveTab('listings');
     } catch (e: any) {
       console.error('Error creating produce lot:', e);
       toast({
@@ -722,7 +759,7 @@ const FarmerDashboard = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="listings" className="mb-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
           <TabsList className="grid w-full grid-cols-5 mb-4">
             <TabsTrigger value="listings">My Produce</TabsTrigger>
             <TabsTrigger value="batches">My Batches</TabsTrigger>
@@ -733,9 +770,18 @@ const FarmerDashboard = () => {
 
           <TabsContent value="listings" className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>My Produce Listings</CardTitle>
-                <CardDescription>Manage your produce listings and track their status</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>My Produce Listings</CardTitle>
+                  <CardDescription>Manage your produce listings and track their status</CardDescription>
+                </div>
+                <Button 
+                  size="sm" 
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => setActiveTab('add')}
+                >
+                  <Plus className="h-4 w-4 mr-1.5" /> Add New Produce
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -751,20 +797,35 @@ const FarmerDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
+                      {/* Empty state when no produce is listed */}
+                      {offchainProduce.length === 0 && recentProduceListings.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="text-center py-12">
+                            <Leaf className="h-10 w-10 text-green-500/40 mx-auto mb-3" />
+                            <p className="font-semibold text-gray-700">No produce lots registered yet</p>
+                            <p className="text-xs text-gray-400 mt-1 mb-4">Click below to register your harvest and instantly generate its verification QR code.</p>
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => setActiveTab('add')}>
+                              <Plus className="h-3.5 w-3.5 mr-1.5" /> Add First Produce Lot
+                            </Button>
+                          </td>
+                        </tr>
+                      )}
+
                       {/* Off-chain produce listings */}
                       {offchainProduce.map((item) => (
                         <tr key={`off-${item.id}`} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-2">{item.crop}</td>
+                          <td className="py-3 px-2 font-medium">{item.crop}</td>
                           <td className="py-3 px-2">{item.quantity}</td>
-                          <td className="py-3 px-2">{item.date}</td>
-                          <td className="py-3 px-2">{item.price}</td>
+                          <td className="py-3 px-2 text-muted-foreground">{item.date}</td>
+                          <td className="py-3 px-2 font-semibold text-green-700">{item.price}</td>
                           <td className="py-3 px-2">
                             <Badge
                               variant="outline"
                               className={cn(
-                                item.status === 'Listed' && 'border-blue-500 text-blue-500',
-                                item.status === 'Sold' && 'border-green-500 text-green-500',
-                                item.status === 'In Transit' && 'border-orange-500 text-orange-500'
+                                item.status === 'Listed' && 'border-blue-500 text-blue-500 bg-blue-50/50',
+                                item.status === 'Sold' && 'border-green-500 text-green-500 bg-green-50/50',
+                                item.status === 'Active' && 'border-green-600 text-green-600 bg-green-50/50',
+                                item.status === 'In Transit' && 'border-orange-500 text-orange-500 bg-orange-50/50'
                               )}
                             >
                               {item.status}
@@ -774,15 +835,14 @@ const FarmerDashboard = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={async () => {
+                              onClick={() => {
                                 setQrType('batch');
                                 setCurrentQRData(item.qr);
-                                try { setCurrentQRCode(await generateQRCodeDataURL(item.qr)); } catch(_) {}
                                 setIsQRDialogOpen(true);
                               }}
-                              className="mr-2"
+                              className="mr-2 border-green-600 text-green-700 hover:bg-green-50"
                             >
-                              <QrCode className="h-3 w-3 mr-1" /> QR Code
+                              <QrCode className="h-3.5 w-3.5 mr-1.5" /> View QR
                             </Button>
                           </td>
                         </tr>
@@ -1039,24 +1099,29 @@ const FarmerDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="pt-4">
+                  <div className="pt-4 flex flex-col md:flex-row md:items-center gap-3">
                     <Button
                       type="submit"
-                      className="bg-green-600 hover:bg-green-700 w-full md:w-auto"
-                      disabled={isCreatingProduct || !walletConnected}
+                      className="bg-green-600 hover:bg-green-700 w-full md:w-auto text-white font-medium"
+                      disabled={isCreatingProduct}
                     >
                       {isCreatingProduct ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating Product...
+                          Registering & Generating QR...
                         </>
                       ) : (
-                        'Create Product on Blockchain'
+                        <>
+                          <QrCode className="mr-2 h-4 w-4" />
+                          Register Produce Lot & Generate QR
+                        </>
                       )}
                     </Button>
-                    {!walletConnected && (
-                      <p className="text-sm text-red-600 mt-2">Please connect your wallet first</p>
-                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {walletConnected 
+                        ? "✓ Sepolia Wallet Connected: Provenance hash will be committed to blockchain." 
+                        : "✓ Cloud Verified: Lot saved to Supabase and immediately verifiable via dynamic QR."}
+                    </p>
                   </div>
                 </form>
               </CardContent>

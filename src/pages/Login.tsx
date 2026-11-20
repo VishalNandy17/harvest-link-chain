@@ -51,8 +51,8 @@ const Login = () => {
         description: "Welcome back to Harvestlink",
       });
       
-      // Redirect to dashboard or home page
-      navigate("/");
+      // Redirect directly to user's operational workspace
+      navigate("/dashboard");
     } catch (error) {
       toast({
         title: "Login failed",

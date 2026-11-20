@@ -45,8 +45,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
       case UserRole.ADMIN:
         return <Navigate to="/dashboards/admin" replace />
       default:
-        // Fallback to general dashboard if role is unknown
-        return <Navigate to="/" replace />
+        // Fallback to active dashboard if role is unknown
+        return <Navigate to="/dashboard" replace />
     }
   }
 

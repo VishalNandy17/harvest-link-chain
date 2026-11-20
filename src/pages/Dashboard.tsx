@@ -9,11 +9,12 @@ const Dashboard = () => {
 
   useEffect(() => {
     // Only redirect if we're not in a loading state and have user data
-    if (!loading && user && userRole) {
-      // Add a small delay to prevent potential redirect loops
+    if (!loading && user) {
+      const effectiveRole = userRole || (localStorage.getItem('hl_active_role') as UserRole) || UserRole.FARMER;
+      
       const redirectTimer = setTimeout(() => {
         // Redirect based on user role
-        switch (userRole) {
+        switch (effectiveRole) {
           case UserRole.FARMER:
             navigate("/dashboards/farmer", { replace: true });
             break;
@@ -36,11 +37,9 @@ const Dashboard = () => {
             navigate("/dashboards/admin", { replace: true });
             break;
           default:
-            // If role is not set or unknown, show a generic dashboard
-            // This could be a fallback or error state
-            console.log("Unknown user role:", userRole);
+            navigate("/dashboards/farmer", { replace: true });
         }
-      }, 300); // Small delay to prevent potential redirect loops
+      }, 100);
       
       return () => clearTimeout(redirectTimer);
     }
